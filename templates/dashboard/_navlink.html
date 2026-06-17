@@ -1,0 +1,7 @@
+{% comment %}Sidebar nav link. `section` (set per view) marks the active item.{% endcomment %}
+<a
+  href="{% url url %}"
+  class="rounded-lg px-3 py-2 transition-colors {% if section == key %}bg-ink text-paper{% else %}text-ink/60 hover:bg-ink/5 hover:text-ink{% endif %}"
+>
+  {{ label }}
+</a>

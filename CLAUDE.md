@@ -69,6 +69,20 @@ code style): https://github.com/huseyn0w/Laravella-CMS
     (allowed types in `constants.py`; SVG rejected as an XSS vector). Browse/upload/
     delete views are permission-gated (`media.*_mediaasset`). Files served at
     `/media/` (Django in dev, web server in prod).
+  - `apps.dashboard` — the custom WordPress-style admin panel (own UI, NOT the
+    Django admin), mounted at `/dashboard/`. Every view extends `AdminAccessMixin`
+    (login + `accounts.access_admin`) plus a per-view permission tuple. Posts use
+    a Trix editor (`frontend/src/admin.js`, a separate Vite entry) whose HTML is
+    sanitized by the content layer on save. Authors/Contributors are scoped to
+    their own posts (`PostScopeMixin`); publishing is gated on `content.publish_post`.
+  - `apps.core` also holds `SiteSettings` (a cached singleton) exposed to all
+    templates as `site` via a context processor.
+
+Frontend assets: changing anything under `frontend/` and rebuilding requires
+`docker compose up -d --build --renew-anon-volumes` (the dev container surfaces the
+image's `frontend/dist` through an anonymous volume that otherwise persists stale).
+NOTE: CSS files imported by a Vite entry (e.g. `admin.css`) must use plain `@apply`
+rules, NOT `@layer`, unless they include their own `@tailwind` directives.
 - `frontend/` — Vite + Tailwind + Alpine source; builds to `frontend/dist`
   (with `.vite/manifest.json`), wired into templates via `django-vite`.
 - `templates/` — project-level base templates (`base.html`).

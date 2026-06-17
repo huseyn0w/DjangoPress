@@ -9,7 +9,10 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     rollupOptions: {
-      input: "src/main.js",
+      input: {
+        main: "src/main.js",
+        admin: "src/admin.js",
+      },
     },
   },
   server: {

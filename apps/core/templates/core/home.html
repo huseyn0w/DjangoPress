@@ -11,6 +11,9 @@
     <span class="text-sm font-semibold tracking-[0.2em] text-ink/70">DJANGOPRESS</span>
     <nav class="flex items-center gap-6 text-sm text-ink/60">
       <a class="hidden transition-colors hover:text-ink sm:inline" href="https://github.com/huseyn0w/Laravella-CMS">GitHub</a>
+      {% if perms.accounts.access_admin %}
+        <a class="transition-colors hover:text-ink" href="{% url 'dashboard:home' %}">Dashboard</a>
+      {% endif %}
       {% if user.is_authenticated %}
         <span class="hidden text-ink/70 sm:inline">Hi, {{ user.display_name }}</span>
         <form method="post" action="{% url 'account_logout' %}" class="inline">

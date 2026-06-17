@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ heading|default:"Dashboard" }} · {{ site.site_name }} admin{% endblock %}
+
+{% block extra_head %}{% load django_vite %}{% vite_asset 'src/admin.js' %}{% endblock %}
+
+{% block body %}
+<div class="flex min-h-full" x-data="{ open: false }">
+  <!-- Sidebar -->
+  <aside
+    class="fixed inset-y-0 left-0 z-30 w-64 -translate-x-full border-r border-ink/10 bg-white/80 backdrop-blur transition-transform duration-200 lg:translate-x-0"
+    :class="open && 'translate-x-0'"
+  >
+    <div class="flex h-16 items-center px-6">
+      <a href="{% url 'dashboard:home' %}" class="text-sm font-semibold tracking-[0.2em] text-ink">
+        {{ site.site_name|upper }}
+      </a>
+    </div>
+    <nav class="flex flex-col gap-1 px-3 py-2 text-sm">
+      {% include "dashboard/_navlink.html" with key="home" url="dashboard:home" label="Dashboard" %}
+      {% if perms.content.view_post %}{% include "dashboard/_navlink.html" with key="posts" url="dashboard:post_list" label="Posts" %}{% endif %}
+      {% if perms.content.view_page %}{% include "dashboard/_navlink.html" with key="pages" url="dashboard:page_list" label="Pages" %}{% endif %}
+      {% if perms.content.view_category %}{% include "dashboard/_navlink.html" with key="categories" url="dashboard:category_list" label="Categories" %}{% endif %}
+      {% if perms.content.view_tag %}{% include "dashboard/_navlink.html" with key="tags" url="dashboard:tag_list" label="Tags" %}{% endif %}
+      {% if perms.media.view_mediaasset %}{% include "dashboard/_navlink.html" with key="media" url="media:library" label="Media" %}{% endif %}
+      {% if perms.accounts.manage_users %}{% include "dashboard/_navlink.html" with key="users" url="dashboard:user_list" label="Users" %}{% endif %}
+      {% if perms.accounts.manage_settings %}{% include "dashboard/_navlink.html" with key="settings" url="dashboard:settings" label="Settings" %}{% endif %}
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <div class="flex min-h-full flex-1 flex-col lg:pl-64">
+    <header class="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-ink/10 bg-paper/80 px-6 backdrop-blur">
+      <div class="flex items-center gap-3">
+        <button @click="open = !open" class="text-ink/60 lg:hidden" aria-label="Toggle menu">☰</button>
+        <h1 class="text-lg font-semibold tracking-tight text-ink">{{ heading|default:"Dashboard" }}</h1>
+      </div>
+      <div class="flex items-center gap-4 text-sm text-ink/60">
+        <a href="/" class="hidden transition-colors hover:text-ink sm:inline">View site ↗</a>
+        <span class="hidden text-ink/70 sm:inline">{{ user.display_name }}</span>
+        <form method="post" action="{% url 'account_logout' %}">{% csrf_token %}
+          <button type="submit" class="transition-colors hover:text-ink">Sign out</button>
+        </form>
+      </div>
+    </header>
+
+    <main class="flex-1 px-6 py-8">
+      {% if messages %}
+        <div class="mb-6 space-y-2">
+          {% for message in messages %}
+            <div class="rounded-lg border border-ink/10 bg-white px-4 py-3 text-sm text-ink/80">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      <div class="mx-auto max-w-5xl">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}

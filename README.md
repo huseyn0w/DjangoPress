@@ -3,13 +3,14 @@
 An open-source, WordPress-style CMS built on Python/Django — lighter, faster, SEO-first,
 and easy to read, understand, and extend.
 
-> **Status:** Phases 1–4 complete (Foundation, Accounts, Content, Media). See the roadmap below.
+> **Status:** Phases 1–5 complete (Foundation, Accounts, Content, Media, Admin panel). See the roadmap below.
 
 ## Stack
 
 - Python 3.12, Django 5.1
 - PostgreSQL (default; ORM kept DB-agnostic so MySQL works on shared hosting)
 - Tailwind CSS 3 + Alpine.js, bundled with Vite via `django-vite`
+- Rich-text editor: Trix (admin), with all HTML sanitized server-side
 - Auth + social login: django-allauth (username/email login + Google)
 - Rich-text sanitization: nh3 (server-side, on every save)
 - Tests: pytest + pytest-django · Lint/format: ruff + black · Types: mypy
@@ -55,7 +56,8 @@ apps/              # Django apps, one per bounded concern
   accounts/        # custom User, roles (Groups), permissions, allauth + Google
   content/         # posts, pages, categories, tags, revisions, sanitization
   media/           # media library: uploads, validation, thumbnails
-  core/            # landing page + shared bits
+  dashboard/       # custom WordPress-style admin panel (own UI)
+  core/            # landing page, SiteSettings, shared bits
 frontend/          # Vite + Tailwind + Alpine source (builds to frontend/dist)
 templates/         # project-level base templates
 docker/            # entrypoint and container helpers
@@ -139,6 +141,29 @@ Uploaded files live under `MEDIA_ROOT` and are served at `/media/` (by Django in
 the web server / object storage in production). Interim management is also available in the
 Django admin; the polished picker integrates with the post editor in Phase 5.
 
+## Admin panel
+
+DjangoPress ships its own WordPress-style admin (the `dashboard` app) — not the bare
+Django admin — at **`/dashboard/`**, gated by the `accounts.access_admin` capability:
+
+- **Dashboard** — at-a-glance counts and recent posts.
+- **Posts / Pages** — full CRUD with a **Trix** rich-text editor (output sanitized by nh3),
+  slug, excerpt, taxonomy, featured image, and draft/publish. Authors and Contributors are
+  **scoped to their own content**; Contributors can only save drafts (publishing is gated
+  on `content.publish_post`).
+- **Categories / Tags** — manage taxonomy.
+- **Media** — the media library (Phase 4), linked from the admin nav.
+- **Users** — list and assign roles (gated by `accounts.manage_users`).
+- **Settings** — site name, tagline, posts-per-page (gated by `accounts.manage_settings`).
+
+Every view is permission-gated, and the sidebar only shows sections the user may access.
+The legacy Django admin remains at `/admin/` as a superuser fallback.
+
+> **Frontend rebuilds & Docker:** the dev container surfaces the image's built assets
+> through an anonymous volume. After changing anything in `frontend/`, rebuild with
+> `docker compose up -d --build --renew-anon-volumes` (or `docker compose down -v` first)
+> so the new assets are picked up. A fresh `docker compose up --build` always works.
+
 ## Configuration
 
 All configuration is via environment variables (see [.env.example](.env.example)); no
@@ -152,7 +177,7 @@ secrets are committed. `DJANGO_SETTINGS_MODULE` selects the settings module
 2. **Accounts** — custom user, roles (Groups), granular permissions, allauth + Google login ✅
 3. **Content** — posts, pages, categories, tags, revisions, server-side sanitized rich text ✅
 4. **Media** — media library, validated uploads, Pillow thumbnails, permission-gated ✅
-5. Custom admin panel
+5. **Admin panel** — custom WordPress-style dashboard (own UI), Trix editor, ownership scoping ✅
 6. Theme system (swappable template sets)
 7. Plugin/extension system (signals + hook registry)
 8. **SEO/GEO** — Open Graph, JSON-LD entity/service schema, sitemap, robots.txt with

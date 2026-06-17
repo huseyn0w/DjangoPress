@@ -1,0 +1,53 @@
+/* Admin form + Trix styling, scoped to the dashboard. Processed by the Tailwind
+   PostCSS plugin, so @apply is available. We do NOT use @layer here because this
+   file has no @tailwind directives of its own (those live in the main bundle). */
+
+.dp-form label {
+  @apply mb-1 block text-sm font-medium text-ink/80;
+}
+
+.dp-form input[type="text"],
+.dp-form input[type="url"],
+.dp-form input[type="email"],
+.dp-form input[type="number"],
+.dp-form input[type="file"],
+.dp-form select,
+.dp-form textarea {
+  @apply block w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm text-ink outline-none transition;
+}
+
+.dp-form input[type="text"]:focus,
+.dp-form input[type="url"]:focus,
+.dp-form input[type="email"]:focus,
+.dp-form input[type="number"]:focus,
+.dp-form select:focus,
+.dp-form textarea:focus {
+  @apply border-accent ring-2 ring-accent/20;
+}
+
+.dp-form select[multiple] {
+  @apply min-h-32;
+}
+
+.dp-form .helptext {
+  @apply mt-1 text-xs text-ink/40;
+}
+
+/* Trix editor — match the editorial surface. */
+trix-editor {
+  @apply min-h-64 rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm leading-relaxed text-ink;
+}
+
+trix-editor:focus {
+  @apply border-accent ring-2 ring-accent/20;
+  outline: none;
+}
+
+trix-toolbar .trix-button-group {
+  @apply rounded-md border-ink/15;
+}
+
+/* We don't wire file attachments yet — hide the attach button. */
+trix-toolbar .trix-button-group--file-tools {
+  display: none;
+}

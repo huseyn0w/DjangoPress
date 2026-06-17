@@ -67,6 +67,7 @@ def sanitize_html(html: str) -> str:
         html,
         tags=_ALLOWED_TAGS,
         attributes=_ALLOWED_ATTRIBUTES,
+        url_schemes={"http", "https", "mailto"},
         link_rel="noopener noreferrer",
     )
 

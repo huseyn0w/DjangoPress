@@ -1,0 +1,11 @@
+{% if is_paginated %}
+  <nav class="mt-6 flex items-center justify-between text-sm text-ink/60">
+    {% if page_obj.has_previous %}
+      <a class="hover:text-ink" href="?page={{ page_obj.previous_page_number }}">← Previous</a>
+    {% else %}<span></span>{% endif %}
+    <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a class="hover:text-ink" href="?page={{ page_obj.next_page_number }}">Next →</a>
+    {% else %}<span></span>{% endif %}
+  </nav>
+{% endif %}
