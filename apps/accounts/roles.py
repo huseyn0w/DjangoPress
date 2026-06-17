@@ -50,8 +50,10 @@ _COMMENT_MODERATION = [
     "comments.moderate_comment",
 ]
 
-# Author: create/edit/publish own posts + upload media (object-level "own"
-# scoping is enforced in views; Django permissions are model-level).
+# Author: create/edit/publish own posts + upload media. Django permissions are
+# model-level, so "own" scoping is applied at the object level where it matters —
+# e.g. draft preview (Post.can_be_viewed_by); the Phase 5 admin will likewise
+# scope edit/list views to ownership for Authors/Contributors.
 _AUTHOR_PERMS = [
     "accounts.access_admin",
     "content.add_post",

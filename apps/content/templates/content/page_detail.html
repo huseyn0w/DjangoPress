@@ -1,0 +1,19 @@
+{% extends "public_base.html" %}
+
+{% block title %}{{ page.title }} · DjangoPress{% endblock %}
+
+{% block main %}
+<article>
+  {% if not page.is_published %}
+    <p class="mb-6 inline-block rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
+      Draft preview
+    </p>
+  {% endif %}
+
+  <h1 class="mb-10 text-balance text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">{{ page.title }}</h1>
+
+  <div class="space-y-5 text-lg leading-relaxed text-ink/80">
+    {{ page.body|safe }}
+  </div>
+</article>
+{% endblock %}

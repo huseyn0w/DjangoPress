@@ -10,8 +10,11 @@ django-vite==3.0.5
 # Auth + social login (Google in this phase, more providers later)
 django-allauth[socialaccount]==65.3.1
 
-# Image handling for avatars
+# Image handling for avatars / media
 Pillow==11.0.0
+
+# Server-side HTML sanitization for rich-text content (Rust-backed, maintained)
+nh3==0.2.20
 
 # WSGI server (used in prod, harmless in dev)
 gunicorn==23.0.0

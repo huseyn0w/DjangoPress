@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     # Local apps
     "apps.accounts",
+    "apps.content",
     "apps.core",
 ]
 
@@ -179,12 +180,12 @@ USE_TZ = True
 # --------------------------------------------------------------------------- #
 # Static & media files
 # --------------------------------------------------------------------------- #
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 # Vite build output is collected as static so whitenoise can serve it.
 STATICFILES_DIRS = [BASE_DIR / "frontend" / "dist"]
 
-MEDIA_URL = "media/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 STORAGES = {

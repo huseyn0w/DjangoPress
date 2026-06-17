@@ -58,6 +58,12 @@ code style): https://github.com/huseyn0w/Laravella-CMS
     `post_migrate` (`apps/accounts/signals.py`); the map may reference permissions
     from models that don't exist yet (they're assigned once those phases land).
     Auth/social login via django-allauth, mounted at `/accounts/`.
+  - `apps.content` — posts, pages, categories (hierarchical), tags, and per-type
+    revisions. Rich-text bodies are sanitized server-side with nh3 on every save
+    (`apps/content/utils.py`); templates render bodies with `|safe` because they
+    were cleaned at write time — keep it that way. `publish_post` is a custom
+    permission; published querysets via `Model.objects.published()`. Content is
+    editable through the interim Django admin until the Phase 5 panel exists.
 - `frontend/` — Vite + Tailwind + Alpine source; builds to `frontend/dist`
   (with `.vite/manifest.json`), wired into templates via `django-vite`.
 - `templates/` — project-level base templates (`base.html`).
