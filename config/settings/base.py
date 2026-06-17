@@ -55,7 +55,10 @@ INSTALLED_APPS = [
     "apps.media",
     "apps.dashboard",
     "apps.themes",
+    "apps.plugins",
     "apps.core",
+    # Plugins (live in the top-level plugins/ directory)
+    "plugins.reading_time",
 ]
 
 MIDDLEWARE = [

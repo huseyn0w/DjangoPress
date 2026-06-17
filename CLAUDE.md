@@ -86,6 +86,16 @@ code style): https://github.com/huseyn0w/Laravella-CMS
     palette is CSS variables (`--color-paper/ink/accent` in `styles.css`), so a
     theme recolors everything by overriding them in its `public_base.html`.
     Tailwind scans `themes/` (see `tailwind.config.js` + the Dockerfile COPY).
+  - `apps.plugins` — the extension system. `hooks.py` is a small registry of
+    actions (`do_action`), filters (`apply_filters`), and region renderers
+    (`render_hook`, exposed as the `{% hook %}` template tag). Callbacks are
+    plugin-scoped (slug inferred from the module under `plugins.`) and skipped
+    when that plugin is disabled, so plugins toggle at runtime. Enable state =
+    the `Plugin` model, synced on `post_migrate`, switched at Dashboard → Plugins
+    (`manage_settings`). Actual plugins live in top-level `plugins/<name>/`
+    (Django apps in `INSTALLED_APPS`); `plugins/reading_time` is the example.
+    The `post_content` filter is applied in `content/post_detail.html` via the
+    `{% post_content post %}` tag; plugin filter output is trusted (operator code).
 
 Frontend assets: changing anything under `frontend/` and rebuilding requires
 `docker compose up -d --build --renew-anon-volumes` (the dev container surfaces the

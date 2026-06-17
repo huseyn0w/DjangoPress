@@ -17,6 +17,7 @@ from django.views.generic import (
 from apps.content.models import Category, Page, Post, Status, Tag
 from apps.core.models import SiteSettings
 from apps.media.models import MediaAsset
+from apps.plugins import registry as plugins
 from apps.themes import registry as themes
 
 from .forms import CategoryForm, PageForm, PostForm, SiteSettingsForm, TagForm, UserRoleForm
@@ -345,6 +346,39 @@ class ThemeActivateView(AdminAccessMixin, View):
         else:
             messages.error(request, "Unknown theme.")
         return redirect("dashboard:themes")
+
+
+# --------------------------------------------------------------------------- #
+# Plugins
+# --------------------------------------------------------------------------- #
+class PluginListView(AdminAccessMixin, SectionMixin, TemplateView):
+    permission_required = ("accounts.access_admin", "accounts.manage_settings")
+    template_name = "dashboard/plugins.html"
+    section = "plugins"
+    heading = "Plugins"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["plugins"] = [
+            {"info": info, "enabled": plugins.is_plugin_enabled(info.slug)}
+            for info in plugins.get_installed_plugins()
+        ]
+        return ctx
+
+
+class PluginToggleView(AdminAccessMixin, View):
+    permission_required = ("accounts.access_admin", "accounts.manage_settings")
+    http_method_names = ["post"]
+
+    def post(self, request, slug: str):
+        now_enabled = not plugins.is_plugin_enabled(slug)
+        if plugins.set_enabled(slug, now_enabled):
+            messages.success(
+                request, f"Plugin “{slug}” {'enabled' if now_enabled else 'disabled'}."
+            )
+        else:
+            messages.error(request, "Unknown plugin.")
+        return redirect("dashboard:plugins")
 
 
 # --------------------------------------------------------------------------- #

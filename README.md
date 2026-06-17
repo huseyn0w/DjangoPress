@@ -3,7 +3,7 @@
 An open-source, WordPress-style CMS built on Python/Django — lighter, faster, SEO-first,
 and easy to read, understand, and extend.
 
-> **Status:** Phases 1–6 complete (Foundation, Accounts, Content, Media, Admin, Themes). See the roadmap below.
+> **Status:** Phases 1–7 complete (Foundation, Accounts, Content, Media, Admin, Themes, Plugins). See the roadmap below.
 
 ## Stack
 
@@ -58,8 +58,10 @@ apps/              # Django apps, one per bounded concern
   media/           # media library: uploads, validation, thumbnails
   dashboard/       # custom WordPress-style admin panel (own UI)
   themes/          # theme registry + runtime template loader
+  plugins/         # hook registry + plugin enable/disable
   core/            # landing page, SiteSettings, shared bits
 themes/            # the themes themselves (default, midnight), each a template set
+plugins/           # the plugins themselves (e.g. reading_time), each a Django app
 frontend/          # Vite + Tailwind + Alpine source (builds to frontend/dist)
 templates/         # project-level base templates
 docker/            # entrypoint and container helpers
@@ -191,6 +193,29 @@ To add a theme: create `themes/<slug>/theme.json`, add template overrides under
 `themes/<slug>/templates/`, rebuild the frontend (Tailwind scans `themes/`), and activate it
 in **Dashboard → Appearance**.
 
+## Plugins
+
+DjangoPress is extended through a small **hook registry** (`apps/plugins/hooks.py`) —
+WordPress-style actions and filters — plus Django's own signals, never arbitrary code
+injection. A plugin is a Django app under `plugins/` that registers hooks in its
+`AppConfig.ready()`:
+
+- **Filters** transform a value: `apply_filters("post_content", body, post=...)`.
+- **Actions** run side effects: `do_action("name", ...)`.
+- **Region hooks** inject template HTML: `{% hook "public_footer" %}`.
+
+Hooks are ordered by priority and are **plugin-scoped**: a callback's plugin is inferred
+from its module, and callbacks of a disabled plugin are skipped at call time — so plugins
+toggle on/off at runtime (no restart) from **Dashboard → Plugins** (gated by
+`accounts.manage_settings`). Enable state lives on the `Plugin` model.
+
+The bundled example, **`plugins/reading_time`**, registers a `post_content` filter that
+prepends a "☕ N min read" badge to every post. Disable it in the admin and it vanishes.
+
+To write a plugin: create `plugins/<name>/` with an `apps.py` (an `AppConfig` carrying
+`plugin_description` / `plugin_version` and a `ready()` that imports its `hooks`), add it to
+`INSTALLED_APPS`, and register filters/actions with the `apps.plugins.hooks` helpers.
+
 ## Configuration
 
 All configuration is via environment variables (see [.env.example](.env.example)); no
@@ -206,7 +231,7 @@ secrets are committed. `DJANGO_SETTINGS_MODULE` selects the settings module
 4. **Media** — media library, validated uploads, Pillow thumbnails, permission-gated ✅
 5. **Admin panel** — custom WordPress-style dashboard (own UI), Trix editor, ownership scoping ✅
 6. **Themes** — swappable template sets resolved at runtime, CSS-variable palette, admin switcher ✅
-7. Plugin/extension system (signals + hook registry)
+7. **Plugins** — hook registry (actions/filters/regions) + signals, runtime enable/disable, example plugin ✅
 8. **SEO/GEO** — Open Graph, JSON-LD entity/service schema, sitemap, robots.txt with
    AI-crawler policy, `llms.txt`, hreflang, multilingual, GEO-optimized page type
    (see [SEO & GEO](#seo--geo-generative-engine-optimization))

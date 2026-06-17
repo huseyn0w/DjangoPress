@@ -1,4 +1,5 @@
 {% extends "public_base.html" %}
+{% load plugin_hooks %}
 
 {% block title %}{{ post.title }} · DjangoPress{% endblock %}
 {% block meta_description %}{{ post.excerpt|default:post.title }}{% endblock %}
@@ -35,7 +36,7 @@
   {% endif %}
 
   <div class="space-y-5 text-lg leading-relaxed text-ink/80">
-    {{ post.body|safe }}
+    {% post_content post %}
   </div>
 
   {% if post.tags.all %}

@@ -34,6 +34,9 @@ urlpatterns = [
     path(
         "appearance/<slug:slug>/activate/", views.ThemeActivateView.as_view(), name="theme_activate"
     ),
+    # Plugins
+    path("plugins/", views.PluginListView.as_view(), name="plugins"),
+    path("plugins/<slug:slug>/toggle/", views.PluginToggleView.as_view(), name="plugin_toggle"),
     # Settings
     path("settings/", views.SettingsView.as_view(), name="settings"),
 ]
