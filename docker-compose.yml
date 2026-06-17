@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-djangopress}
+      POSTGRES_USER: ${POSTGRES_USER:-djangopress}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-djangopress}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-djangopress}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      args:
+        REQUIREMENTS: dev
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      # Local development only. Do NOT reuse this service definition for staging
+      # or production — use config.settings.prod with real secrets there.
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-insecure-change-me}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      POSTGRES_DB: ${POSTGRES_DB:-djangopress}
+      POSTGRES_USER: ${POSTGRES_USER:-djangopress}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-djangopress}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      DJANGO_VITE_DEV_MODE: "False"
+    volumes:
+      - .:/app
+      # Keep the image's built assets; don't let the bind mount hide them.
+      - /app/frontend/dist
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

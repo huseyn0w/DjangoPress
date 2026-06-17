@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+/* Scoped styling for the allauth auth screens (login / signup / reset).
+   allauth renders plain elements, so we style them here rather than overriding
+   every allauth element template. */
+@layer components {
+  .dp-auth h1 {
+    @apply mb-6 text-2xl font-semibold tracking-tight text-ink;
+  }
+
+  .dp-auth p {
+    @apply mb-4 text-sm leading-relaxed text-ink/60;
+  }
+
+  .dp-auth label {
+    @apply mb-1 block text-sm font-medium text-ink/80;
+  }
+
+  .dp-auth input:not([type="checkbox"]):not([type="radio"]) {
+    @apply mb-4 block w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm text-ink
+      outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20;
+  }
+
+  .dp-auth button,
+  .dp-auth [type="submit"] {
+    @apply inline-flex w-full items-center justify-center rounded-full bg-ink px-5 py-2.5
+      text-sm font-medium text-paper transition-transform duration-200 hover:-translate-y-0.5;
+  }
+
+  .dp-auth a {
+    @apply font-medium text-accent underline-offset-4 hover:underline;
+  }
+
+  .dp-auth ul {
+    @apply list-none;
+  }
+}

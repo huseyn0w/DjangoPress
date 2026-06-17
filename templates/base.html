@@ -1,0 +1,18 @@
+{% load django_vite %}<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}DjangoPress — a lighter, faster, SEO-first CMS{% endblock %}</title>
+    <meta
+      name="description"
+      content="{% block meta_description %}DjangoPress is an open-source, WordPress-style CMS built on Django — lighter, faster, and SEO-first.{% endblock %}"
+    />
+    {% vite_hmr_client %}
+    {% vite_asset 'src/main.js' %}
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body class="h-full bg-paper text-ink antialiased">
+    {% block body %}{% endblock %}
+  </body>
+</html>

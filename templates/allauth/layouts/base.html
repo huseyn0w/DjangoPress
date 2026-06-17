@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% block head_title %}{% endblock head_title %} · DjangoPress{% endblock %}
+
+{% block body %}
+<main class="relative flex min-h-full items-center justify-center px-6 py-16">
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+    <div class="absolute -top-40 left-1/2 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-accent/10 blur-3xl"></div>
+  </div>
+
+  <div class="dp-auth relative w-full max-w-md">
+    <a href="/" class="mb-8 block text-center text-sm font-semibold tracking-[0.2em] text-ink/70">
+      DJANGOPRESS
+    </a>
+
+    <div class="rounded-2xl border border-ink/10 bg-white/70 p-8 shadow-sm backdrop-blur">
+      {% if messages %}
+        <ul class="mb-6 space-y-2">
+          {% for message in messages %}
+            <li class="rounded-lg bg-accent/5 px-3 py-2 text-sm text-ink/80">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      {% block content %}{% endblock content %}
+    </div>
+  </div>
+</main>
+{% endblock body %}
+
+{% block extra_body %}{% endblock extra_body %}

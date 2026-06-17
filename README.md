@@ -1,2 +1,121 @@
 # DjangoPress
-Analog on Wordpress written in Python Django which is lighter, simpler, faster and more secure.
+
+An open-source, WordPress-style CMS built on Python/Django — lighter, faster, SEO-first,
+and easy to read, understand, and extend.
+
+> **Status:** Phases 1–2 complete (Foundation, Accounts). See the roadmap below.
+
+## Stack
+
+- Python 3.12, Django 5.1
+- PostgreSQL (default; ORM kept DB-agnostic so MySQL works on shared hosting)
+- Tailwind CSS 3 + Alpine.js, bundled with Vite via `django-vite`
+- Auth + social login: django-allauth (username/email login + Google)
+- Tests: pytest + pytest-django · Lint/format: ruff + black · Types: mypy
+- Local infra: Docker + docker compose · Prod: gunicorn + nginx + whitenoise
+
+## Quick start (Docker)
+
+```bash
+cp .env.example .env          # adjust if you like; defaults work out of the box
+docker compose up --build
+```
+
+Then open <http://localhost:8000> — you should see the styled DjangoPress landing page.
+The web container waits for Postgres, runs migrations, and serves the app on port 8000.
+
+## Local development (without Docker)
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements/dev.txt
+
+# Frontend assets (Tailwind + Alpine via Vite)
+cd frontend && npm install && npm run build && cd ..
+
+# Run against a local Postgres, or export DATABASE_URL
+python manage.py migrate
+python manage.py runserver
+```
+
+For live frontend reloads, run the Vite dev server and enable dev mode:
+
+```bash
+cd frontend && npm run dev           # serves on :5173 with HMR
+# in .env: DJANGO_VITE_DEV_MODE=True
+```
+
+## Project layout
+
+```
+config/            # Django project: settings split (base/dev/prod/test), urls, wsgi/asgi
+  settings/
+apps/              # Django apps, one per bounded concern
+  accounts/        # custom User, roles (Groups), permissions, allauth + Google
+  core/            # landing page + shared bits
+frontend/          # Vite + Tailwind + Alpine source (builds to frontend/dist)
+templates/         # project-level base templates
+docker/            # entrypoint and container helpers
+requirements/      # base / dev / prod dependency sets
+```
+
+## Common commands
+
+| Task | Command |
+| --- | --- |
+| Dev up | `docker compose up` |
+| Migrate | `docker compose exec web python manage.py migrate` |
+| Create admin user | `docker compose exec web python manage.py createsuperuser` |
+| Tests | `docker compose exec web pytest` (or `pytest` in a local venv) |
+| Single test | `pytest apps/core/tests/test_home.py::test_home_status_ok` |
+| Lint / format | `ruff check .` · `black .` |
+| Frontend build | `cd frontend && npm run build` (watch: `npm run dev`) |
+
+## Accounts, roles & permissions
+
+Authentication is handled by [django-allauth](https://docs.allauth.org): users sign in
+with username **or** email and password, or via Google (set `GOOGLE_CLIENT_ID` /
+`GOOGLE_CLIENT_SECRET`). Auth pages live under `/accounts/` (`/accounts/login/`,
+`/accounts/signup/`, …) and use a styled DjangoPress layout.
+
+Roles are WordPress-style and implemented as Django **Groups**, kept in sync by a
+`post_migrate` hook (`apps/accounts/signals.py`) from a single definition in
+`apps/accounts/roles.py`:
+
+| Role | Capabilities (grows as later phases add models) |
+| --- | --- |
+| Administrator | All content/media/comment permissions + manage users & settings |
+| Editor | All content/media + comment moderation; no user/settings management |
+| Author | Create / edit / publish own posts, upload media |
+| Contributor | Draft posts only (no publish, no media) |
+| Subscriber | Authenticated reader; default role for new signups |
+
+Permissions are standard Django permissions, so `user.has_perm(...)`,
+`@permission_required`, and `PermissionRequiredMixin` all work. The sync is idempotent
+and only assigns permissions whose models exist, so the table fills in across phases.
+
+## Configuration
+
+All configuration is via environment variables (see [.env.example](.env.example)); no
+secrets are committed. `DJANGO_SETTINGS_MODULE` selects the settings module
+(`config.settings.dev` or `config.settings.prod`); the test suite always uses
+`config.settings.test` (in-memory SQLite, no external services).
+
+## Roadmap
+
+1. **Foundation** — Docker, Django skeleton, settings split, pytest, ruff/black, Tailwind+Vite ✅
+2. **Accounts** — custom user, roles (Groups), granular permissions, allauth + Google login ✅
+3. Content — posts, pages, categories, tags, revisions, sanitized rich text
+4. Media library and uploads
+5. Custom admin panel
+6. Theme system (swappable template sets)
+7. Plugin/extension system (signals + hook registry)
+8. SEO/GEO — Open Graph, JSON-LD, sitemap, robots.txt, hreflang, multilingual
+9. Comments, search, recaptcha spam protection
+10. Public site rendering + the luxury frontend
+11. AI integration — MCP server (FastMCP)
+12. Production deployment (VPS + shared hosting) + demo seed data
+
+## License
+
+See [LICENSE](LICENSE).

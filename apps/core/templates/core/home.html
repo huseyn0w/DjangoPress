@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block body %}
+<main class="relative min-h-full overflow-hidden">
+  <!-- soft editorial backdrop -->
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+    <div class="absolute -top-40 left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-accent/10 blur-3xl"></div>
+  </div>
+
+  <header class="relative mx-auto flex max-w-5xl items-center justify-between px-6 py-8">
+    <span class="text-sm font-semibold tracking-[0.2em] text-ink/70">DJANGOPRESS</span>
+    <nav class="flex items-center gap-6 text-sm text-ink/60">
+      <a class="hidden transition-colors hover:text-ink sm:inline" href="https://github.com/huseyn0w/Laravella-CMS">GitHub</a>
+      {% if user.is_authenticated %}
+        <span class="hidden text-ink/70 sm:inline">Hi, {{ user.display_name }}</span>
+        <form method="post" action="{% url 'account_logout' %}" class="inline">
+          {% csrf_token %}
+          <button type="submit" class="transition-colors hover:text-ink">Sign out</button>
+        </form>
+      {% else %}
+        <a class="transition-colors hover:text-ink" href="{% url 'account_login' %}">Sign in</a>
+        <a
+          class="rounded-full bg-ink px-4 py-2 text-paper transition-transform duration-200 hover:-translate-y-0.5"
+          href="{% url 'account_signup' %}"
+          >Get started</a
+        >
+      {% endif %}
+    </nav>
+  </header>
+
+  <section class="relative mx-auto flex max-w-5xl flex-col items-start px-6 pb-32 pt-20 sm:pt-28">
+    <span
+      class="mb-8 inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white/60 px-4 py-1.5 text-xs font-medium tracking-wide text-ink/70 backdrop-blur"
+    >
+      <span class="h-1.5 w-1.5 rounded-full bg-accent"></span>
+      Phase 1 · Foundation
+    </span>
+
+    <h1 class="max-w-3xl text-balance text-5xl font-semibold leading-[1.05] tracking-tight sm:text-7xl">
+      A WordPress-class CMS,<br />
+      <span class="text-accent">rebuilt on Django.</span>
+    </h1>
+
+    <p class="mt-8 max-w-xl text-pretty text-lg leading-relaxed text-ink/60">
+      Lighter, faster, and SEO-first. Clean code you can read, understand, and extend —
+      with a real theme system, a plugin layer, and AI-native tooling.
+    </p>
+
+    <div class="mt-10 flex flex-wrap items-center gap-4">
+      <a
+        href="#"
+        class="group inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper transition-transform duration-200 hover:-translate-y-0.5"
+      >
+        Get started
+        <span class="transition-transform duration-200 group-hover:translate-x-0.5">→</span>
+      </a>
+      <a href="#" class="text-sm font-medium text-ink/70 underline-offset-4 transition-colors hover:text-ink hover:underline">
+        Read the docs
+      </a>
+    </div>
+  </section>
+
+  <footer class="relative mx-auto max-w-5xl px-6 pb-12 text-xs text-ink/40">
+    Built with Django 5 · Tailwind · Alpine · Vite
+  </footer>
+</main>
+{% endblock %}

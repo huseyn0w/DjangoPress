@@ -1,0 +1,49 @@
+[project]
+name = "djangopress"
+version = "0.1.0"
+description = "An open-source, WordPress-style CMS built on Python/Django — lighter, faster, SEO-first."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+extend-exclude = '''
+/(
+    migrations
+  | frontend
+)/
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations", "frontend"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, flake8-bugbear, flake8-comprehensions, pyupgrade, django
+select = ["E", "F", "I", "B", "C4", "UP", "DJ"]
+ignore = ["E501"]  # line length handled by black
+
+[tool.ruff.lint.per-file-ignores]
+"**/settings/*.py" = ["F403", "F405"]  # settings modules use star-imports by design
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["tests.py", "test_*.py", "*_test.py"]
+# --ds is highest precedence, so the suite always runs under test settings even
+# when the container sets DJANGO_SETTINGS_MODULE=dev in the environment.
+addopts = "-ra --strict-markers --ds=config.settings.test"
+testpaths = ["apps", "tests"]
+filterwarnings = [
+    # whitenoise warns when STATIC_ROOT is empty (before collectstatic) — benign in tests.
+    "ignore:No directory at:UserWarning",
+]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = true
+plugins = []
+exclude = ["migrations", "frontend"]
