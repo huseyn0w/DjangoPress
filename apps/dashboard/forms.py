@@ -3,6 +3,7 @@ from __future__ import annotations
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from parler.forms import TranslatableModelForm
 
 from apps.content.models import Category, Page, Post, Tag
 from apps.core.models import SiteSettings
@@ -10,7 +11,7 @@ from apps.core.models import SiteSettings
 User = get_user_model()
 
 
-class PostForm(forms.ModelForm):
+class PostForm(TranslatableModelForm):
     class Meta:
         model = Post
         fields = [
@@ -39,7 +40,7 @@ class PostForm(forms.ModelForm):
             del self.fields["status"]
 
 
-class PageForm(forms.ModelForm):
+class PageForm(TranslatableModelForm):
     class Meta:
         model = Page
         fields = ["title", "slug", "body", "template", "status", "parent"]
@@ -52,7 +53,7 @@ class PageForm(forms.ModelForm):
         self.fields["body"].required = False
 
 
-class CategoryForm(forms.ModelForm):
+class CategoryForm(TranslatableModelForm):
     class Meta:
         model = Category
         fields = ["name", "slug", "parent", "description"]
@@ -63,7 +64,7 @@ class CategoryForm(forms.ModelForm):
         self.fields["slug"].required = False
 
 
-class TagForm(forms.ModelForm):
+class TagForm(TranslatableModelForm):
     class Meta:
         model = Tag
         fields = ["name", "slug"]

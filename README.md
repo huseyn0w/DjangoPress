@@ -3,7 +3,8 @@
 An open-source, WordPress-style CMS built on Python/Django — lighter, faster, SEO-first,
 and easy to read, understand, and extend.
 
-> **Status:** Phases 1–7 complete (Foundation, Accounts, Content, Media, Admin, Themes, Plugins). See the roadmap below.
+> **Status:** Phases 1–7 complete (Foundation, Accounts, Content, Media, Admin, Themes, Plugins).
+> Phase 8 (SEO/GEO) in progress — slice 8.1 (multilingual content + hreflang) shipped. See the roadmap below.
 
 ## Stack
 
@@ -12,6 +13,7 @@ and easy to read, understand, and extend.
 - Tailwind CSS 3 + Alpine.js, bundled with Vite via `django-vite`
 - Rich-text editor: Trix (admin), with all HTML sanitized server-side
 - Auth + social login: django-allauth (username/email login + Google)
+- Multilingual content: django-parler (per-language translation tables, hreflang)
 - Rich-text sanitization: nh3 (server-side, on every save)
 - Tests: pytest + pytest-django · Lint/format: ruff + black · Types: mypy
 - Local infra: Docker + docker compose · Prod: gunicorn + nginx + whitenoise
@@ -216,6 +218,30 @@ To write a plugin: create `plugins/<name>/` with an `apps.py` (an `AppConfig` ca
 `plugin_description` / `plugin_version` and a `ready()` that imports its `hooks`), add it to
 `INSTALLED_APPS`, and register filters/actions with the `apps.plugins.hooks` helpers.
 
+## Internationalization (multilingual content)
+
+Content is multilingual via [django-parler](https://django-parler.readthedocs.io). Posts,
+pages, categories and tags keep their **text** (title, body, excerpt, name, description) in
+per-language translation tables, while structural fields (slug, status, publish date, author,
+taxonomy) are shared — so each record has **one stable slug** and the URL's language prefix
+selects the language.
+
+- **Languages:** configured in `LANGUAGES` (ships with English + German; English is the
+  default). `LANGUAGE_CODE = "en"`.
+- **URLs:** the default language keeps clean URLs (`/blog/<slug>/`); every other language is
+  served under its prefix (`/de/blog/<slug>/`), wired with `i18n_patterns`. The admin,
+  dashboard, auth and media URLs are not language-prefixed.
+- **hreflang:** every public page advertises `rel="alternate" hreflang="…"` links for each
+  language plus `x-default`, and a language switcher in the header — so search and answer
+  engines can discover and serve the right language version.
+- **Editing:** in the dashboard editor a language tab strip (`?language=xx`) lets you write
+  each language's translation independently; missing translations fall back to the default
+  language so a half-translated site still renders. Rich-text is nh3-sanitized per language
+  on every save.
+
+To add a language, add it to `LANGUAGES` in the settings and translate content from the
+dashboard — no migration needed (parler stores languages as rows, not columns).
+
 ## Configuration
 
 All configuration is via environment variables (see [.env.example](.env.example)); no
@@ -232,9 +258,10 @@ secrets are committed. `DJANGO_SETTINGS_MODULE` selects the settings module
 5. **Admin panel** — custom WordPress-style dashboard (own UI), Trix editor, ownership scoping ✅
 6. **Themes** — swappable template sets resolved at runtime, CSS-variable palette, admin switcher ✅
 7. **Plugins** — hook registry (actions/filters/regions) + signals, runtime enable/disable, example plugin ✅
-8. **SEO/GEO** — Open Graph, JSON-LD entity/service schema, sitemap, robots.txt with
-   AI-crawler policy, `llms.txt`, hreflang, multilingual, GEO-optimized page type
-   (see [SEO & GEO](#seo--geo-generative-engine-optimization))
+8. **SEO/GEO** *(in progress)* — Open Graph, JSON-LD entity/service schema, sitemap,
+   robots.txt with AI-crawler policy, `llms.txt`, hreflang, multilingual, GEO-optimized
+   page type (see [SEO & GEO](#seo--geo-generative-engine-optimization)).
+   ✅ 8.1 multilingual content (django-parler) + hreflang + language switcher
 9. Comments, search, recaptcha spam protection
 10. Public site rendering + the luxury frontend
 11. AI integration — MCP server (FastMCP)

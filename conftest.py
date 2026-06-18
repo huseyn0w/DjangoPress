@@ -1,5 +1,6 @@
 import pytest
 from django.core.cache import cache
+from django.utils import translation
 
 
 @pytest.fixture(autouse=True)
@@ -12,3 +13,16 @@ def _clear_cache():
     cache.clear()
     yield
     cache.clear()
+
+
+@pytest.fixture(autouse=True)
+def _reset_active_language():
+    """Reset the thread-local active language around every test.
+
+    LocaleMiddleware activates a request's language (e.g. a GET to /de/...) and
+    does not reset it afterwards, so without this the activated language would
+    leak into later tests and make URL reversing order-dependent.
+    """
+    translation.activate("en")
+    yield
+    translation.deactivate_all()

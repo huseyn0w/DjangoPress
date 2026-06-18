@@ -20,7 +20,8 @@ def test_editor_creates_page(client, make_user):
         },
     )
     assert response.status_code == 302
-    assert Page.objects.filter(title="About").exists()
+    # title is translated (parler) -> query through the translation table.
+    assert Page.objects.filter(translations__title="About").exists()
 
 
 def test_editor_creates_category_and_tag(client, make_user):
@@ -29,8 +30,8 @@ def test_editor_creates_category_and_tag(client, make_user):
         reverse("dashboard:category_create"), {"name": "News", "slug": "", "description": ""}
     )
     client.post(reverse("dashboard:tag_create"), {"name": "django", "slug": ""})
-    assert Category.objects.filter(name="News").exists()
-    assert Tag.objects.filter(name="django").exists()
+    assert Category.objects.filter(translations__name="News").exists()
+    assert Tag.objects.filter(translations__name="django").exists()
 
 
 def test_admin_updates_user_roles(client, make_user):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.db.models import Count, QuerySet
@@ -13,6 +14,7 @@ from django.views.generic import (
     UpdateView,
     View,
 )
+from parler.views import TranslatableModelFormMixin
 
 from apps.content.models import Category, Page, Post, Status, Tag
 from apps.core.models import SiteSettings
@@ -24,6 +26,20 @@ from .forms import CategoryForm, PageForm, PostForm, SiteSettingsForm, TagForm, 
 from .mixins import AdminAccessMixin
 
 User = get_user_model()
+
+
+class DashboardTranslatableFormMixin(TranslatableModelFormMixin):
+    """parler editing mixin that rejects unknown ``?language=`` codes.
+
+    parler normalises the query parameter but does not validate it against the
+    configured languages, so a hand-crafted ``?language=xx`` would silently create
+    an orphan translation row. Clamp it to a configured language instead.
+    """
+
+    def get_language(self):
+        language = super().get_language()
+        valid = {code for code, _name in settings.LANGUAGES}
+        return language if language in valid else self.get_default_language()
 
 
 class SectionMixin:
@@ -95,7 +111,8 @@ class PostListView(AdminAccessMixin, SectionMixin, PostScopeMixin, ListView):
             qs = qs.filter(status=status)
         search = self.request.GET.get("q")
         if search:
-            qs = qs.filter(title__icontains=search)
+            # title is translated (parler) -> search through the translation table.
+            qs = qs.filter(translations__title__icontains=search).distinct()
         return qs
 
 
@@ -115,13 +132,16 @@ class PublishGatingMixin:
     def form_valid(self, form):
         if not self.request.user.has_perm("content.publish_post"):
             if form.instance.pk:
-                form.instance.status = Post.objects.get(pk=form.instance.pk).status
+                # status is a shared (untranslated) field; fetch just it.
+                form.instance.status = Post.objects.only("status").get(pk=form.instance.pk).status
             else:
                 form.instance.status = Status.DRAFT
         return super().form_valid(form)
 
 
-class PostCreateView(AdminAccessMixin, SectionMixin, PublishGatingMixin, CreateView):
+class PostCreateView(
+    AdminAccessMixin, SectionMixin, PublishGatingMixin, DashboardTranslatableFormMixin, CreateView
+):
     permission_required = ("accounts.access_admin", "content.add_post")
     model = Post
     form_class = PostForm
@@ -137,7 +157,12 @@ class PostCreateView(AdminAccessMixin, SectionMixin, PublishGatingMixin, CreateV
 
 
 class PostUpdateView(
-    AdminAccessMixin, SectionMixin, PostScopeMixin, PublishGatingMixin, UpdateView
+    AdminAccessMixin,
+    SectionMixin,
+    PostScopeMixin,
+    PublishGatingMixin,
+    DashboardTranslatableFormMixin,
+    UpdateView,
 ):
     permission_required = ("accounts.access_admin", "content.change_post")
     form_class = PostForm
@@ -171,10 +196,12 @@ class PageListView(AdminAccessMixin, SectionMixin, ListView):
     paginate_by = 20
     section = "pages"
     heading = "Pages"
-    queryset = Page.objects.select_related("author")
+    # Models lost their Meta ordering (it referenced now-translated fields), so
+    # order on a shared field here for stable pagination.
+    queryset = Page.objects.select_related("author").order_by("-created_at")
 
 
-class PageCreateView(AdminAccessMixin, SectionMixin, CreateView):
+class PageCreateView(AdminAccessMixin, SectionMixin, DashboardTranslatableFormMixin, CreateView):
     permission_required = ("accounts.access_admin", "content.add_page")
     model = Page
     form_class = PageForm
@@ -189,7 +216,7 @@ class PageCreateView(AdminAccessMixin, SectionMixin, CreateView):
         return super().form_valid(form)
 
 
-class PageUpdateView(AdminAccessMixin, SectionMixin, UpdateView):
+class PageUpdateView(AdminAccessMixin, SectionMixin, DashboardTranslatableFormMixin, UpdateView):
     permission_required = ("accounts.access_admin", "content.change_page")
     model = Page
     form_class = PageForm
@@ -219,10 +246,16 @@ class CategoryListView(AdminAccessMixin, SectionMixin, ListView):
     context_object_name = "categories"
     section = "categories"
     heading = "Categories"
-    queryset = Category.objects.select_related("parent").annotate(post_count=Count("posts"))
+    queryset = (
+        Category.objects.select_related("parent")
+        .annotate(post_count=Count("posts"))
+        .order_by("slug")
+    )
 
 
-class CategoryCreateView(AdminAccessMixin, SectionMixin, CreateView):
+class CategoryCreateView(
+    AdminAccessMixin, SectionMixin, DashboardTranslatableFormMixin, CreateView
+):
     permission_required = ("accounts.access_admin", "content.add_category")
     model = Category
     form_class = CategoryForm
@@ -232,7 +265,9 @@ class CategoryCreateView(AdminAccessMixin, SectionMixin, CreateView):
     heading = "New category"
 
 
-class CategoryUpdateView(AdminAccessMixin, SectionMixin, UpdateView):
+class CategoryUpdateView(
+    AdminAccessMixin, SectionMixin, DashboardTranslatableFormMixin, UpdateView
+):
     permission_required = ("accounts.access_admin", "content.change_category")
     model = Category
     form_class = CategoryForm
@@ -255,10 +290,10 @@ class TagListView(AdminAccessMixin, SectionMixin, ListView):
     context_object_name = "tags"
     section = "tags"
     heading = "Tags"
-    queryset = Tag.objects.annotate(post_count=Count("posts"))
+    queryset = Tag.objects.annotate(post_count=Count("posts")).order_by("slug")
 
 
-class TagCreateView(AdminAccessMixin, SectionMixin, CreateView):
+class TagCreateView(AdminAccessMixin, SectionMixin, DashboardTranslatableFormMixin, CreateView):
     permission_required = ("accounts.access_admin", "content.add_tag")
     model = Tag
     form_class = TagForm
@@ -268,7 +303,7 @@ class TagCreateView(AdminAccessMixin, SectionMixin, CreateView):
     heading = "New tag"
 
 
-class TagUpdateView(AdminAccessMixin, SectionMixin, UpdateView):
+class TagUpdateView(AdminAccessMixin, SectionMixin, DashboardTranslatableFormMixin, UpdateView):
     permission_required = ("accounts.access_admin", "content.change_tag")
     model = Tag
     form_class = TagForm

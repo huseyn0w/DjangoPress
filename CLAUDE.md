@@ -62,8 +62,19 @@ code style): https://github.com/huseyn0w/Laravella-CMS
     revisions. Rich-text bodies are sanitized server-side with nh3 on every save
     (`apps/content/utils.py`); templates render bodies with `|safe` because they
     were cleaned at write time — keep it that way. `publish_post` is a custom
-    permission; published querysets via `Model.objects.published()`. Content is
-    editable through the interim Django admin until the Phase 5 panel exists.
+    permission; published querysets via `Model.objects.published()`.
+    **Multilingual (Phase 8.1, django-parler):** translated fields live on a
+    per-model translation table — Post(title/excerpt/body), Page(title/body),
+    Category(name/description), Tag(name). `slug`/`status`/`published_at`/`author`/
+    taxonomy FKs stay SHARED on the base model (one stable slug per record; the URL
+    language prefix differentiates languages), so managers, URLs and publish/scoping
+    logic were unaffected. Query translated fields via `Model.objects.language(code)`
+    or `filter(translations__field=...)`, NEVER `filter(title=...)` (raises
+    FieldError). nh3 still runs in `save()` for EVERY language's body. Revisions
+    carry a `language_code` (per-language history). Managers are parler
+    `TranslatableManager.from_queryset(PublishableQuerySet)`. Editable through the
+    dashboard one language at a time via `?language=xx` tabs; the interim Django
+    admin uses `parler.admin.TranslatableAdmin`.
   - `apps.media` — media library. `MediaAsset` stores files plus extracted metadata
     and a Pillow thumbnail (built on first save). Uploads validated in `forms.py`
     (allowed types in `constants.py`; SVG rejected as an XSS vector). Browse/upload/
@@ -112,6 +123,22 @@ Settings selection: `DJANGO_SETTINGS_MODULE` chooses dev/prod; pytest pins
 `config.settings.test` via `--ds` so the container's env var can't override it.
 Frontend assets: in dev with the Vite server, set `DJANGO_VITE_DEV_MODE=True` for HMR;
 otherwise built assets are served from the manifest (the docker compose default).
+
+Internationalization (Phase 8.1): `LANGUAGES = en, de` (`LANGUAGE_CODE = "en"`, a
+bare code so it matches parler's lookups). `PARLER_LANGUAGES` is keyed by `SITE_ID`
+(not `None`) — parler's language-tab helper looks it up directly. Public content +
+core URLs are wrapped in `i18n_patterns(prefix_default_language=False)` in
+`config/urls.py`: the default language keeps clean URLs (`/blog/<slug>/`), other
+languages are prefixed (`/de/blog/<slug>/`); `LocaleMiddleware` (after sessions,
+before common) activates the language from the prefix. admin/dashboard/accounts/
+media stay OUTSIDE the i18n patterns. `apps/core/context_processors.py:i18n_alternates`
+builds hreflang/x-default alternates + switcher data via `translate_url`, emitting
+them only when the per-language URLs differ (so non-public pages get none); rendered
+in `templates/public_base.html`'s `extra_head` + header switcher. Dashboard create/
+update views use `DashboardTranslatableFormMixin` (parler `?language=xx`, validated
+against `LANGUAGES`) with the `_language_tabs.html` partial. GOTCHA: the root
+`conftest.py` resets the active language per test (LocaleMiddleware leaves it
+activated, which otherwise makes `reverse()`/URL tests order-dependent).
 
 ## Working rules
 

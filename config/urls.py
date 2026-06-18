@@ -1,10 +1,13 @@
 """Root URL configuration for DjangoPress."""
 
 from django.conf import settings
+from django.conf.urls.i18n import i18n_patterns
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+# Non-public, non-translated surfaces: the admin/dashboard UI, auth, media files
+# and the language-switch endpoint. These keep stable, prefix-free URLs.
 urlpatterns = [
     # The custom panel at /dashboard/ is the primary admin. The Django admin is
     # kept as a superuser-only fallback: it requires is_staff, which NO DjangoPress
@@ -13,10 +16,20 @@ urlpatterns = [
     # django-allauth: login, signup, logout, password reset, social login.
     path("accounts/", include("allauth.urls")),
     path("dashboard/", include("apps.dashboard.urls")),
+    path("i18n/", include("django.conf.urls.i18n")),
     path("", include("apps.media.urls")),
+]
+
+# Public content is offered per language. prefix_default_language=False keeps the
+# default language on clean, prefix-free URLs (/blog/<slug>/) while every other
+# language is served under its code (/de/blog/<slug>/) — distinct URLs that the
+# hreflang alternates point at. LocaleMiddleware activates the language from the
+# prefix on each request.
+urlpatterns += i18n_patterns(
     path("", include("apps.content.urls")),
     path("", include("apps.core.urls")),
-]
+    prefix_default_language=False,
+)
 
 # Serve user-uploaded media in development. In production these are served by the
 # web server / object storage in front of the app.

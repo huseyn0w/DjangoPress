@@ -1,12 +1,37 @@
 {% extends "base.html" %}
 {% load plugin_hooks %}
 
+{% block extra_head %}
+  {% comment %}
+    Tell search and answer engines about every language version of this page.
+    x-default points crawlers at the default-language URL.
+  {% endcomment %}
+  {% for alt in i18n_alternates %}
+    <link rel="alternate" hreflang="{{ alt.code }}" href="{{ alt.url }}" />
+  {% endfor %}
+  {% if i18n_x_default %}
+    <link rel="alternate" hreflang="x-default" href="{{ i18n_x_default }}" />
+  {% endif %}
+{% endblock %}
+
 {% block body %}
 <div class="flex min-h-full flex-col">
   <header class="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-8">
     <a href="/" class="text-sm font-semibold tracking-[0.2em] text-ink/80">DJANGOPRESS</a>
     <nav class="flex items-center gap-6 text-sm text-ink/60">
       <a class="transition-colors hover:text-ink" href="{% url 'content:post_list' %}">Blog</a>
+      {% if i18n_alternates|length > 1 %}
+        <div class="flex items-center gap-2" aria-label="Language">
+          {% for alt in i18n_alternates %}
+            <a
+              href="{{ alt.url }}"
+              hreflang="{{ alt.code }}"
+              class="uppercase tracking-wide transition-colors hover:text-ink{% if alt.is_current %} text-ink font-semibold{% endif %}"
+              title="{{ alt.name }}"
+            >{{ alt.code }}</a>
+          {% endfor %}
+        </div>
+      {% endif %}
       {% if perms.accounts.access_admin %}
         <a class="transition-colors hover:text-ink" href="{% url 'dashboard:home' %}">Dashboard</a>
       {% endif %}

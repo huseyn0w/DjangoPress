@@ -1,0 +1,19 @@
+{% comment %}
+  Per-language editing tabs (django-parler). Each tab links to ?language=<code>;
+  the view edits that language's translation in isolation. "current" is the tab
+  being edited, "available" already has a translation, "empty" does not yet.
+{% endcomment %}
+{% if language_tabs %}
+  <div class="mb-6 flex items-center gap-1 border-b border-ink/10" role="tablist" aria-label="Language">
+    {% for url, title, code, status in language_tabs %}
+      <a
+        href="{{ url }}"
+        class="-mb-px rounded-t-lg border-b-2 px-4 py-2 text-sm transition-colors
+          {% if status == 'current' %}border-accent font-semibold text-ink{% else %}border-transparent text-ink/50 hover:text-ink{% endif %}"
+      >
+        {{ title }}
+        {% if status == 'empty' %}<span class="ml-1 text-xs text-ink/30">·</span>{% endif %}
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}

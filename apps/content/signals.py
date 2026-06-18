@@ -1,4 +1,8 @@
-"""Snapshot a revision whenever a Post or Page is saved."""
+"""Snapshot a revision whenever a Post or Page is saved.
+
+Bodies are translated per language (django-parler), so revisions are scoped to the
+language that was just saved: each language keeps its own independent history.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +13,7 @@ from .models import Page, PageRevision, Post, PostRevision
 
 
 def _changed_since_last(latest, title: str, body: str) -> bool:
-    """True if there is no prior revision or the title/body actually changed.
+    """True if there is no prior revision (in this language) or the content changed.
 
     Avoids noise: a metadata-only save (e.g. flipping status to published) won't
     create a duplicate snapshot of identical content.
@@ -19,23 +23,31 @@ def _changed_since_last(latest, title: str, body: str) -> bool:
 
 @receiver(post_save, sender=Post)
 def _snapshot_post(sender, instance: Post, **kwargs) -> None:
-    latest = instance.revisions.first()  # ordered -created_at via Revision.Meta
-    if _changed_since_last(latest, instance.title, instance.body):
+    language = instance.get_current_language()
+    title = instance.safe_translation_getter("title", default="", language_code=language)
+    body = instance.safe_translation_getter("body", default="", language_code=language)
+    latest = instance.revisions.filter(language_code=language).first()
+    if _changed_since_last(latest, title, body):
         PostRevision.objects.create(
             post=instance,
-            title=instance.title,
-            body=instance.body,
+            language_code=language,
+            title=title,
+            body=body,
             author=instance.author,
         )
 
 
 @receiver(post_save, sender=Page)
 def _snapshot_page(sender, instance: Page, **kwargs) -> None:
-    latest = instance.revisions.first()
-    if _changed_since_last(latest, instance.title, instance.body):
+    language = instance.get_current_language()
+    title = instance.safe_translation_getter("title", default="", language_code=language)
+    body = instance.safe_translation_getter("body", default="", language_code=language)
+    latest = instance.revisions.filter(language_code=language).first()
+    if _changed_since_last(latest, title, body):
         PageRevision.objects.create(
             page=instance,
-            title=instance.title,
-            body=instance.body,
+            language_code=language,
+            title=title,
+            body=body,
             author=instance.author,
         )

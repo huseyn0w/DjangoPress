@@ -1,6 +1,7 @@
 {% extends "dashboard/base.html" %}
 
 {% block content %}
+{% include "dashboard/_language_tabs.html" %}
 <form method="post" class="dp-form">
   {% csrf_token %}
   {% if form.non_field_errors %}

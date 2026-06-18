@@ -5,6 +5,8 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from parler.managers import TranslatableManager, TranslatableQuerySet
+from parler.models import TranslatableModel, TranslatedFields
 
 from .utils import sanitize_html, unique_slugify
 
@@ -22,12 +24,18 @@ class Status(models.TextChoices):
     PUBLISHED = "published", _("Published")
 
 
-class Category(TimeStampedModel):
-    """Hierarchical taxonomy term (a category can have a parent category)."""
+class Category(TranslatableModel, TimeStampedModel):
+    """Hierarchical taxonomy term (a category can have a parent category).
 
-    name = models.CharField(_("name"), max_length=100)
+    ``name`` / ``description`` are translated per language; ``slug`` is shared so a
+    category keeps one stable URL across languages (the language prefix differs).
+    """
+
+    translations = TranslatedFields(
+        name=models.CharField(_("name"), max_length=100),
+        description=models.TextField(_("description"), blank=True),
+    )
     slug = models.SlugField(_("slug"), max_length=100, unique=True, blank=True)
-    description = models.TextField(_("description"), blank=True)
     parent = models.ForeignKey(
         "self",
         verbose_name=_("parent"),
@@ -37,13 +45,14 @@ class Category(TimeStampedModel):
         related_name="children",
     )
 
+    objects = TranslatableManager()
+
     class Meta:
         verbose_name = _("category")
         verbose_name_plural = _("categories")
-        ordering = ["name"]
 
     def __str__(self) -> str:
-        return self.name
+        return self.safe_translation_getter("name", any_language=True) or self.slug
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
@@ -54,17 +63,20 @@ class Category(TimeStampedModel):
         return reverse("content:category", args=[self.slug])
 
 
-class Tag(TimeStampedModel):
-    name = models.CharField(_("name"), max_length=50)
+class Tag(TranslatableModel, TimeStampedModel):
+    translations = TranslatedFields(
+        name=models.CharField(_("name"), max_length=50),
+    )
     slug = models.SlugField(_("slug"), max_length=50, unique=True, blank=True)
+
+    objects = TranslatableManager()
 
     class Meta:
         verbose_name = _("tag")
         verbose_name_plural = _("tags")
-        ordering = ["name"]
 
     def __str__(self) -> str:
-        return self.name
+        return self.safe_translation_getter("name", any_language=True) or self.slug
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
@@ -75,7 +87,7 @@ class Tag(TimeStampedModel):
         return reverse("content:tag", args=[self.slug])
 
 
-class PublishableQuerySet(models.QuerySet):
+class PublishableQuerySet(TranslatableQuerySet):
     def published(self) -> models.QuerySet:
         return self.filter(status=Status.PUBLISHED, published_at__lte=timezone.now())
 
@@ -83,8 +95,15 @@ class PublishableQuerySet(models.QuerySet):
         return self.filter(status=Status.DRAFT)
 
 
-class Post(TimeStampedModel):
-    title = models.CharField(_("title"), max_length=200)
+PublishableManager = TranslatableManager.from_queryset(PublishableQuerySet)
+
+
+class Post(TranslatableModel, TimeStampedModel):
+    translations = TranslatedFields(
+        title=models.CharField(_("title"), max_length=200),
+        excerpt=models.TextField(_("excerpt"), blank=True),
+        body=models.TextField(_("body"), blank=True),
+    )
     slug = models.SlugField(_("slug"), max_length=200, unique=True, blank=True)
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -93,8 +112,6 @@ class Post(TimeStampedModel):
         null=True,
         related_name="posts",
     )
-    excerpt = models.TextField(_("excerpt"), blank=True)
-    body = models.TextField(_("body"), blank=True)
     featured_image = models.ImageField(
         _("featured image"), upload_to="posts/", blank=True, null=True
     )
@@ -108,7 +125,7 @@ class Post(TimeStampedModel):
     )
     tags = models.ManyToManyField(Tag, verbose_name=_("tags"), blank=True, related_name="posts")
 
-    objects = PublishableQuerySet.as_manager()
+    objects = PublishableManager()
 
     class Meta:
         verbose_name = _("post")
@@ -119,12 +136,13 @@ class Post(TimeStampedModel):
         permissions = [("publish_post", "Can publish posts")]
 
     def __str__(self) -> str:
-        return self.title
+        return self.safe_translation_getter("title", any_language=True) or self.slug
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
             self.slug = unique_slugify(self, self.title, max_length=200)
-        # Sanitize all author-supplied HTML server-side, every save.
+        # Sanitize all author-supplied HTML server-side, every save. These are
+        # translated fields, so each language's body/excerpt is cleaned on its save.
         self.body = sanitize_html(self.body)
         self.excerpt = sanitize_html(self.excerpt)
         # Stamp publish time on first publish only. Re-publishing after an unpublish
@@ -156,10 +174,13 @@ class Post(TimeStampedModel):
         return user == self.author or user.has_perm("content.delete_post")
 
 
-class Page(TimeStampedModel):
+class Page(TranslatableModel, TimeStampedModel):
     """A standalone, optionally hierarchical page (About, Contact, ...)."""
 
-    title = models.CharField(_("title"), max_length=200)
+    translations = TranslatedFields(
+        title=models.CharField(_("title"), max_length=200),
+        body=models.TextField(_("body"), blank=True),
+    )
     slug = models.SlugField(_("slug"), max_length=200, unique=True, blank=True)
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -168,7 +189,6 @@ class Page(TimeStampedModel):
         null=True,
         related_name="pages",
     )
-    body = models.TextField(_("body"), blank=True)
     template = models.CharField(_("template"), max_length=100, default="default")
     status = models.CharField(
         _("status"), max_length=10, choices=Status.choices, default=Status.DRAFT
@@ -183,15 +203,14 @@ class Page(TimeStampedModel):
         related_name="children",
     )
 
-    objects = PublishableQuerySet.as_manager()
+    objects = PublishableManager()
 
     class Meta:
         verbose_name = _("page")
         verbose_name_plural = _("pages")
-        ordering = ["title"]
 
     def __str__(self) -> str:
-        return self.title
+        return self.safe_translation_getter("title", any_language=True) or self.slug
 
     def save(self, *args, **kwargs) -> None:
         if not self.slug:
@@ -218,8 +237,9 @@ class Page(TimeStampedModel):
 
 
 class Revision(TimeStampedModel):
-    """Immutable snapshot of a post/page body taken on each save."""
+    """Immutable snapshot of one language's post/page body taken on each save."""
 
+    language_code = models.CharField(_("language"), max_length=15, default="en")
     title = models.CharField(_("title"), max_length=200)
     body = models.TextField(_("body"), blank=True)
     author = models.ForeignKey(
@@ -235,7 +255,7 @@ class Revision(TimeStampedModel):
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
-        return f"{self.title} @ {self.created_at:%Y-%m-%d %H:%M}"
+        return f"{self.title} [{self.language_code}] @ {self.created_at:%Y-%m-%d %H:%M}"
 
 
 class PostRevision(Revision):

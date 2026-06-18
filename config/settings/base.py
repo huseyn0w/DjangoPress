@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.sites",
     # Third-party
     "django_vite",
+    "parler",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -65,6 +66,9 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # LocaleMiddleware activates the request language from the URL prefix
+    # (i18n_patterns) / Accept-Language; must sit after sessions, before common.
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -91,8 +95,10 @@ TEMPLATES = [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
+                "django.template.context_processors.i18n",
                 "django.contrib.messages.context_processors.messages",
                 "apps.core.context_processors.site_settings",
+                "apps.core.context_processors.i18n_alternates",
             ],
             "loaders": [
                 "apps.themes.loaders.ThemeLoader",
@@ -193,10 +199,37 @@ AUTH_PASSWORD_VALIDATORS = [
 # --------------------------------------------------------------------------- #
 # Internationalization
 # --------------------------------------------------------------------------- #
-LANGUAGE_CODE = "en-us"
+# Default language. Kept as a bare code ("en", not "en-us") so it matches the
+# LANGUAGES keys below and parler's per-language translation lookups.
+LANGUAGE_CODE = env("DJANGO_LANGUAGE_CODE", default="en")
+
+# The languages the public site is offered in. Content (posts/pages/taxonomy) is
+# translated per-language via django-parler; the URL carries a language prefix
+# for every non-default language (see i18n_patterns in config/urls.py), which is
+# what makes the hreflang alternates point at distinct, crawlable URLs.
+LANGUAGES = [
+    ("en", "English"),
+    ("de", "Deutsch"),
+]
+
+LOCALE_PATHS = [BASE_DIR / "locale"]
+
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
+
+# django-parler: one translation row per language, falling back to the default
+# language when a translation is missing so a half-translated site still renders.
+PARLER_DEFAULT_LANGUAGE_CODE = LANGUAGE_CODE
+# Keyed by SITE_ID (not None) so parler's language-tab helper, which looks up
+# PARLER_LANGUAGES[SITE_ID] directly, finds the configured languages.
+PARLER_LANGUAGES = {
+    SITE_ID: tuple({"code": code} for code, _name in LANGUAGES),
+    "default": {
+        "fallback": LANGUAGE_CODE,
+        "hide_untranslated": False,
+    },
+}
 
 # --------------------------------------------------------------------------- #
 # Static & media files
