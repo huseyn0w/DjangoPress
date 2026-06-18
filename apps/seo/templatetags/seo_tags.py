@@ -60,6 +60,17 @@ def seo_jsonld(context, obj=None, og_type: str = "website"):
             (obj.seo_title(), obj.canonical_url or abs_url(obj.get_absolute_url())),
         ]
         nodes.append(jsonld.breadcrumb_schema(crumbs))
+    elif obj is not None and og_type == "service":
+        nodes.append(jsonld.service_schema(obj, seo, site, abs_url))
+        faq = jsonld.faqpage_schema(obj.faq_items())
+        if faq:
+            nodes.append(faq)
+        crumbs = [
+            ("Home", abs_url("/")),
+            ("Services", abs_url(reverse("content:service_list"))),
+            (obj.seo_title(), obj.canonical_url or abs_url(obj.get_absolute_url())),
+        ]
+        nodes.append(jsonld.breadcrumb_schema(crumbs))
     elif obj is not None:
         crumbs = [
             ("Home", abs_url("/")),

@@ -4,8 +4,8 @@ An open-source, WordPress-style CMS built on Python/Django — lighter, faster, 
 and easy to read, understand, and extend.
 
 > **Status:** Phases 1–7 complete (Foundation, Accounts, Content, Media, Admin, Themes, Plugins).
-> Phase 8 (SEO/GEO) in progress — slices 8.1 (multilingual + hreflang), 8.2 (SEO core), 8.3 (JSON-LD)
-> and 8.4 (sitemap.xml, AI-crawler robots.txt, llms.txt) shipped. See the roadmap below.
+> **Phase 8 (SEO/GEO) complete** — multilingual + hreflang, SEO core, JSON-LD, sitemap/robots/llms,
+> and the GEO-optimized Service page type. See the roadmap below.
 
 ## Stack
 
@@ -279,7 +279,11 @@ control it per page and site-wide:
 > In production, set the site's domain (Django “Sites” framework / `SITE_ID`) so `sitemap.xml`
 > emits absolute URLs on your real host (covered in the Phase 12 deployment guide).
 
-A GEO-optimized Service page type follows in the final Phase 8 slice.
+- **GEO-optimized Service pages** — a first-class **Service** content type at `/services/`
+  built for the format answer engines quote: a crisp definitional summary, a rich description,
+  citable **pricing** and **area-served** facts, and a **Q&A** block — emitting `Service` and
+  `FAQPage` JSON-LD so assistants can extract what you offer, where, and answer common questions.
+  Managed in Dashboard → Services (multilingual, with its own SEO fields).
 
 ## Configuration
 
@@ -297,13 +301,14 @@ secrets are committed. `DJANGO_SETTINGS_MODULE` selects the settings module
 5. **Admin panel** — custom WordPress-style dashboard (own UI), Trix editor, ownership scoping ✅
 6. **Themes** — swappable template sets resolved at runtime, CSS-variable palette, admin switcher ✅
 7. **Plugins** — hook registry (actions/filters/regions) + signals, runtime enable/disable, example plugin ✅
-8. **SEO/GEO** *(in progress)* — Open Graph, JSON-LD entity/service schema, sitemap,
+8. **SEO/GEO** ✅ — Open Graph, JSON-LD entity/service schema, sitemap,
    robots.txt with AI-crawler policy, `llms.txt`, hreflang, multilingual, GEO-optimized
    page type (see [SEO & GEO](#seo--geo-generative-engine-optimization)).
    ✅ 8.1 multilingual content (django-parler) + hreflang + language switcher ·
    ✅ 8.2 SEO core (per-content meta/OG/Twitter, canonical, robots, SEO settings) ·
    ✅ 8.3 JSON-LD (Organization, WebSite, Article, Person, BreadcrumbList) ·
-   ✅ 8.4 sitemap.xml (hreflang), AI-crawler robots.txt, llms.txt / llms-full.txt
+   ✅ 8.4 sitemap.xml (hreflang), AI-crawler robots.txt, llms.txt / llms-full.txt ·
+   ✅ 8.5 GEO Service page type (Service + FAQPage schema, Q&A, area/pricing facts)
 9. Comments, search, recaptcha spam protection
 10. Public site rendering + the luxury frontend
 11. AI integration — MCP server (FastMCP)

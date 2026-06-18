@@ -11,7 +11,7 @@ from django.http import HttpResponse
 from django.urls import reverse
 from django.utils.html import strip_tags
 
-from apps.content.models import Page, Post
+from apps.content.models import Page, Post, Service
 from apps.core.models import SiteSettings
 
 from .constants import AI_CRAWLER_USER_AGENTS
@@ -65,6 +65,10 @@ def _published_posts():
     return Post.objects.published().filter(noindex=False).select_related("author")[:LLMS_MAX_ITEMS]
 
 
+def _published_services():
+    return Service.objects.published().filter(noindex=False)[:LLMS_MAX_ITEMS]
+
+
 def llms_txt(request) -> HttpResponse:
     """A concise, link-first index of the site (see llmstxt.org)."""
     site = SiteSettings.load()
@@ -74,6 +78,14 @@ def llms_txt(request) -> HttpResponse:
     out: list[str] = [f"# {site.site_name}"]
     if summary:
         out += ["", f"> {summary}"]
+
+    services = list(_published_services())
+    if services:
+        out += ["", "## Services"]
+        for service in services:
+            url = request.build_absolute_uri(service.get_absolute_url())
+            desc = service.seo_description()
+            out += [f"- [{service.seo_title()}]({url})" + (f": {desc}" if desc else "")]
 
     pages = list(_published_pages())
     if pages:
@@ -116,6 +128,7 @@ def llms_full_txt(request) -> HttpResponse:
             body = strip_tags(getattr(obj, "body", "") or "").strip()
             out.append(body if body else obj.seo_description())
 
+    section("Services", _published_services())
     section("Pages", _published_pages())
     section("Blog", _published_posts())
 

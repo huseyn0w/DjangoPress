@@ -16,6 +16,11 @@ urlpatterns = [
     path("pages/new/", views.PageCreateView.as_view(), name="page_create"),
     path("pages/<int:pk>/edit/", views.PageUpdateView.as_view(), name="page_edit"),
     path("pages/<int:pk>/delete/", views.PageDeleteView.as_view(), name="page_delete"),
+    # Services (GEO)
+    path("services/", views.ServiceListView.as_view(), name="service_list"),
+    path("services/new/", views.ServiceCreateView.as_view(), name="service_create"),
+    path("services/<int:pk>/edit/", views.ServiceUpdateView.as_view(), name="service_edit"),
+    path("services/<int:pk>/delete/", views.ServiceDeleteView.as_view(), name="service_delete"),
     # Categories
     path("categories/", views.CategoryListView.as_view(), name="category_list"),
     path("categories/new/", views.CategoryCreateView.as_view(), name="category_create"),

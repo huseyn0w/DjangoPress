@@ -23,6 +23,7 @@
       {% include "dashboard/_navlink.html" with key="home" url="dashboard:home" label="Dashboard" %}
       {% if perms.content.view_post %}{% include "dashboard/_navlink.html" with key="posts" url="dashboard:post_list" label="Posts" %}{% endif %}
       {% if perms.content.view_page %}{% include "dashboard/_navlink.html" with key="pages" url="dashboard:page_list" label="Pages" %}{% endif %}
+      {% if perms.content.view_service %}{% include "dashboard/_navlink.html" with key="services" url="dashboard:service_list" label="Services" %}{% endif %}
       {% if perms.content.view_category %}{% include "dashboard/_navlink.html" with key="categories" url="dashboard:category_list" label="Categories" %}{% endif %}
       {% if perms.content.view_tag %}{% include "dashboard/_navlink.html" with key="tags" url="dashboard:tag_list" label="Tags" %}{% endif %}
       {% if perms.media.view_mediaasset %}{% include "dashboard/_navlink.html" with key="media" url="media:library" label="Media" %}{% endif %}

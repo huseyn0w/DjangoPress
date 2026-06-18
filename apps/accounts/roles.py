@@ -29,9 +29,12 @@ _TAXONOMY_PERMS = [
     "delete_tag",
     "view_tag",
 ]
+# Service (GEO) permissions (apps.content, Phase 8.5).
+_SERVICE_PERMS = ["add_service", "change_service", "delete_service", "view_service"]
 _CONTENT_FULL = (
     [f"content.{p}" for p in _POST_PERMS]
     + [f"content.{p}" for p in _PAGE_PERMS]
+    + [f"content.{p}" for p in _SERVICE_PERMS]
     + [f"content.{p}" for p in _TAXONOMY_PERMS]
 )
 

@@ -19,6 +19,7 @@
   <header class="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-8">
     <a href="/" class="text-sm font-semibold tracking-[0.2em] text-ink/80">DJANGOPRESS</a>
     <nav class="flex items-center gap-6 text-sm text-ink/60">
+      <a class="transition-colors hover:text-ink" href="{% url 'content:service_list' %}">Services</a>
       <a class="transition-colors hover:text-ink" href="{% url 'content:post_list' %}">Blog</a>
       {% if i18n_alternates|length > 1 %}
         <div class="flex items-center gap-2" aria-label="Language">

@@ -74,7 +74,13 @@ code style): https://github.com/huseyn0w/Laravella-CMS
     carry a `language_code` (per-language history). Managers are parler
     `TranslatableManager.from_queryset(PublishableQuerySet)`. Editable through the
     dashboard one language at a time via `?language=xx` tabs; the interim Django
-    admin uses `parler.admin.TranslatableAdmin`.
+    admin uses `parler.admin.TranslatableAdmin`. **Service (Phase 8.5)** is a
+    GEO-optimized content type (translatable, SeoFieldsMixin): `summary`
+    (definitional sentence), rich `description` (nh3-sanitized), `price`,
+    `area_served`, and a `faq` Q&A textarea (`faq_items()` parses `Q:`/`A:` lines).
+    Public at `/services/` + `/services/<slug>/`, dashboard CRUD gated by
+    `content.*_service` (Admin/Editor); emits `Service` + `FAQPage` JSON-LD and is
+    included in the sitemap + llms.txt.
   - `apps.media` — media library. `MediaAsset` stores files plus extracted metadata
     and a Pillow thumbnail (built on first save). Uploads validated in `forms.py`
     (allowed types in `constants.py`; SVG rejected as an XSS vector). Browse/upload/
@@ -140,8 +146,11 @@ code style): https://github.com/huseyn0w/Laravella-CMS
     `SeoSettings.allow_ai_crawlers`); `discourage_search` short-circuits to
     `Disallow: /` with no sitemap. llms.txt files capped at `LLMS_MAX_ITEMS`. NOTE:
     `sitemap.xml` `<loc>` uses the `django.contrib.sites` domain (set the Site to the
-    real domain in prod — Phase 12); robots/llms use the request host.
-    (8.5 Service page type lands here.)
+    real domain in prod — Phase 12); robots/llms use the request host. **Service +
+    FAQPage JSON-LD (8.5):** `jsonld.service_schema`/`faqpage_schema`; the
+    `seo_jsonld` tag's `"service"` branch emits Service+FAQPage+BreadcrumbList. A
+    freeform `price` is deliberately NOT emitted as a schema.org `Offer` (invalid
+    without numeric price/currency) — it stays a visible on-page fact.
 
 Frontend assets: changing anything under `frontend/` and rebuilding requires
 `docker compose up -d --build --renew-anon-volumes` (the dev container surfaces the

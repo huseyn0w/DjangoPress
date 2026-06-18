@@ -5,7 +5,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.views.generic import DetailView, ListView
 
-from .models import Category, Page, Post, Tag
+from .models import Category, Page, Post, Service, Tag
 
 
 class PublishedPostMixin:
@@ -76,3 +76,23 @@ class PageDetailView(DetailView):
         if not page.can_be_viewed_by(self.request.user):
             raise Http404
         return page
+
+
+class ServiceListView(ListView):
+    template_name = "content/service_list.html"
+    context_object_name = "services"
+
+    def get_queryset(self) -> QuerySet:
+        return Service.objects.published()
+
+
+class ServiceDetailView(DetailView):
+    template_name = "content/service_detail.html"
+    context_object_name = "service"
+    queryset = Service.objects.all()
+
+    def get_object(self, queryset: QuerySet | None = None) -> Service:
+        service = super().get_object(queryset)
+        if not service.can_be_viewed_by(self.request.user):
+            raise Http404
+        return service

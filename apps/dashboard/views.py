@@ -16,7 +16,7 @@ from django.views.generic import (
 )
 from parler.views import TranslatableModelFormMixin
 
-from apps.content.models import Category, Page, Post, Status, Tag
+from apps.content.models import Category, Page, Post, Service, Status, Tag
 from apps.core.models import SiteSettings
 from apps.media.models import MediaAsset
 from apps.plugins import registry as plugins
@@ -28,6 +28,7 @@ from .forms import (
     PageForm,
     PostForm,
     SeoSettingsForm,
+    ServiceForm,
     SiteSettingsForm,
     TagForm,
     UserRoleForm,
@@ -243,6 +244,55 @@ class PageDeleteView(AdminAccessMixin, DeleteView):
     permission_required = ("accounts.access_admin", "content.delete_page")
     model = Page
     success_url = reverse_lazy("dashboard:page_list")
+    http_method_names = ["post"]
+
+
+# --------------------------------------------------------------------------- #
+# Services (GEO)
+# --------------------------------------------------------------------------- #
+class ServiceListView(AdminAccessMixin, SectionMixin, ListView):
+    permission_required = ("accounts.access_admin", "content.view_service")
+    template_name = "dashboard/service_list.html"
+    context_object_name = "services"
+    paginate_by = 20
+    section = "services"
+    heading = "Services"
+    queryset = Service.objects.select_related("author").order_by("-created_at")
+
+
+class ServiceCreateView(AdminAccessMixin, SectionMixin, DashboardTranslatableFormMixin, CreateView):
+    permission_required = ("accounts.access_admin", "content.add_service")
+    model = Service
+    form_class = ServiceForm
+    template_name = "dashboard/service_form.html"
+    success_url = reverse_lazy("dashboard:service_list")
+    section = "services"
+    heading = "New service"
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        messages.success(self.request, "Service created.")
+        return super().form_valid(form)
+
+
+class ServiceUpdateView(AdminAccessMixin, SectionMixin, DashboardTranslatableFormMixin, UpdateView):
+    permission_required = ("accounts.access_admin", "content.change_service")
+    model = Service
+    form_class = ServiceForm
+    template_name = "dashboard/service_form.html"
+    success_url = reverse_lazy("dashboard:service_list")
+    section = "services"
+    heading = "Edit service"
+
+    def form_valid(self, form):
+        messages.success(self.request, "Service updated.")
+        return super().form_valid(form)
+
+
+class ServiceDeleteView(AdminAccessMixin, DeleteView):
+    permission_required = ("accounts.access_admin", "content.delete_service")
+    model = Service
+    success_url = reverse_lazy("dashboard:service_list")
     http_method_names = ["post"]
 
 

@@ -84,6 +84,45 @@ def article_schema(post, seo, site, abs_url: Callable[[str], str], language: str
     return data
 
 
+def service_schema(service, seo, site, abs_url: Callable[[str], str]) -> dict:
+    data: dict = {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": service.seo_title(),
+        "url": service.canonical_url or abs_url(service.get_absolute_url()),
+        "provider": {"@type": "Organization", "name": (seo.og_site_name or site.site_name).strip()},
+    }
+    description = (service.summary or "").strip() or service.seo_description()
+    if description:
+        data["description"] = description
+    area = (getattr(service, "area_served", "") or "").strip()
+    if area:
+        data["areaServed"] = area
+    # Price is intentionally NOT emitted as a schema.org Offer: it's a freeform
+    # string ("From $499", "€90/hour") that wouldn't satisfy Offer's numeric
+    # price/priceCurrency requirements and would fail Rich Results validation. It
+    # stays a visible, citable fact on the page instead.
+    return data
+
+
+def faqpage_schema(faq_items: list[tuple[str, str]]) -> dict | None:
+    """faq_items: [(question, answer), ...]. Returns None when empty."""
+    if not faq_items:
+        return None
+    return {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": question,
+                "acceptedAnswer": {"@type": "Answer", "text": answer},
+            }
+            for question, answer in faq_items
+        ],
+    }
+
+
 def breadcrumb_schema(items: list[tuple[str, str]]) -> dict:
     """items: ordered [(name, absolute_url), ...] from site root to current page."""
     return {

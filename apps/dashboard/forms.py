@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from parler.forms import TranslatableModelForm
 
-from apps.content.models import Category, Page, Post, Tag
+from apps.content.models import Category, Page, Post, Service, Tag
 from apps.core.models import SiteSettings
 from apps.seo.models import SeoSettings
 
@@ -80,6 +80,41 @@ class PageForm(TranslatableModelForm):
         super().__init__(*args, **kwargs)
         self.fields["slug"].required = False
         self.fields["body"].required = False
+
+
+class ServiceForm(TranslatableModelForm):
+    class Meta:
+        model = Service
+        fields = [
+            "title",
+            "slug",
+            "summary",
+            "description",
+            "price",
+            "area_served",
+            "faq",
+            "status",
+            "meta_title",
+            "meta_description",
+            "canonical_url",
+            "og_image",
+            "noindex",
+        ]
+        widgets = {
+            "description": forms.HiddenInput(),  # Trix editor in the template
+            "summary": forms.Textarea(attrs={"rows": 2}),
+            "faq": forms.Textarea(attrs={"rows": 6}),
+            "meta_description": forms.Textarea(attrs={"rows": 2}),
+        }
+        help_texts = {
+            "slug": "Leave blank to generate from the title.",
+            "faq": "One pair per block — a line starting “Q:” then a line starting “A:”.",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["slug"].required = False
+        self.fields["description"].required = False
 
 
 class CategoryForm(TranslatableModelForm):
