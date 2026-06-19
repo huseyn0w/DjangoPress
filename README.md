@@ -302,7 +302,10 @@ Posts support **threaded, moderated comments** (`comments` app):
 - Two switches in Dashboard → Settings: **Allow comments** (site-wide) and **Require login
   to comment**.
 
-reCAPTCHA spam protection for the comment form lands in the next Phase 9 slice.
+**Spam protection (reCAPTCHA v3):** set `RECAPTCHA_PUBLIC_KEY` and `RECAPTCHA_PRIVATE_KEY`
+(both) to enable an invisible reCAPTCHA on the comment form. Leave either blank and the
+captcha is simply not added — the comment flow works exactly as before, so dev and CI need
+no keys. Get keys ("reCAPTCHA v3") at <https://www.google.com/recaptcha/admin>.
 
 ## Search
 
@@ -345,7 +348,8 @@ secrets are committed. `DJANGO_SETTINGS_MODULE` selects the settings module
    ✅ 8.4 sitemap.xml (hreflang), AI-crawler robots.txt, llms.txt / llms-full.txt ·
    ✅ 8.5 GEO Service page type (Service + FAQPage schema, Q&A, area/pricing facts)
 9. Comments, search, recaptcha spam protection — ✅ 9.1 threaded moderated comments ·
-   ✅ 9.2 site search (Postgres full-text + `icontains` fallback, multilingual, `/search/`)
+   ✅ 9.2 site search (Postgres full-text + `icontains` fallback, multilingual, `/search/`) ·
+   ✅ 9.3 reCAPTCHA v3 spam protection on the comment form (graceful when unset)
 10. Public site rendering + the luxury frontend
 11. AI integration — MCP server (FastMCP)
 12. Production deployment (VPS + shared hosting) + demo seed data

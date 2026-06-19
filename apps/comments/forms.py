@@ -1,8 +1,24 @@
 from __future__ import annotations
 
 from django import forms
+from django.conf import settings
+from django_recaptcha.fields import ReCaptchaField
+from django_recaptcha.widgets import ReCaptchaV3
 
 from .models import Comment, CommentStatus
+
+
+def recaptcha_enabled() -> bool:
+    """True only when both reCAPTCHA keys are configured.
+
+    Read live from settings (not cached at import) so tests and per-environment
+    config toggle it; when False the captcha field is omitted entirely and the
+    comment flow stays frictionless.
+    """
+    return bool(
+        getattr(settings, "RECAPTCHA_PUBLIC_KEY", "")
+        and getattr(settings, "RECAPTCHA_PRIVATE_KEY", "")
+    )
 
 
 class CommentForm(forms.ModelForm):
@@ -34,3 +50,6 @@ class CommentForm(forms.ModelForm):
             # Identity comes from the account; don't ask for name/email.
             self.fields.pop("name")
             self.fields.pop("email")
+        if recaptcha_enabled():
+            # v3 is invisible: it scores the request in the background, no checkbox.
+            self.fields["captcha"] = ReCaptchaField(widget=ReCaptchaV3())

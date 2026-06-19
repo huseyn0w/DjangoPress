@@ -19,5 +19,8 @@ Pillow==11.0.0
 # Server-side HTML sanitization for rich-text content (Rust-backed, maintained)
 nh3==0.2.20
 
+# Spam protection: reCAPTCHA v3 on public forms (gracefully disabled without keys)
+django-recaptcha==4.0.0
+
 # WSGI server (used in prod, harmless in dev)
 gunicorn==23.0.0

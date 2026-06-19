@@ -164,7 +164,14 @@ code style): https://github.com/huseyn0w/Laravella-CMS
     unmoderated comment. Gated by `SiteSettings.allow_comments` /
     `comments_require_login`. Moderation UI at Dashboard → Comments
     (`CommentListView` + `CommentModerateView`, approve/spam/delete, gated by
-    `comments.moderate_comment`). (9.3 reCAPTCHA lands next.)
+    `comments.moderate_comment`). **Spam (9.3, django-recaptcha v3):** an invisible
+    `captcha` `ReCaptchaField` is added to `CommentForm` **only when both
+    `RECAPTCHA_PUBLIC_KEY` and `RECAPTCHA_PRIVATE_KEY` are set** (`forms.recaptcha_enabled()`,
+    read live from settings). Keys come from env (default `""`), so dev/CI/tests run with
+    NO captcha and the 9.1 flow is byte-for-byte unchanged. `django_recaptcha` is in
+    `INSTALLED_APPS`; the public site key is rendered client-side, the private key stays
+    server-side. Empty defaults are NOT the library's built-in test keys, so `manage.py
+    check` stays clean (0 silenced) — no `SILENCED_SYSTEM_CHECKS` needed.
   - `apps.search` — public site search over published Posts and Pages (Phase 9.2).
     `services.search_content(query, language_code)` is the single entry point: it
     searches the translated title/body (+ Post excerpt) of the **active language's**

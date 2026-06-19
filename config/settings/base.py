@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
+    "django_recaptcha",
     # Local apps
     "apps.accounts",
     "apps.content",
@@ -190,6 +191,14 @@ SOCIALACCOUNT_PROVIDERS = {
 
 # New self-service signups are placed in a default role (see apps.accounts.roles).
 SOCIALACCOUNT_LOGIN_ON_GET = False
+
+# reCAPTCHA v3 spam protection. Keys come from the environment; when either is
+# blank the captcha field is simply not added to public forms (see
+# apps.comments.forms.recaptcha_enabled), so the site runs fine without keys in
+# dev/CI. Empty (not the library's built-in test keys) so the security check stays
+# quiet without hiding a real misconfiguration.
+RECAPTCHA_PUBLIC_KEY = env("RECAPTCHA_PUBLIC_KEY", default="")
+RECAPTCHA_PRIVATE_KEY = env("RECAPTCHA_PRIVATE_KEY", default="")
 
 # --------------------------------------------------------------------------- #
 # Password validation

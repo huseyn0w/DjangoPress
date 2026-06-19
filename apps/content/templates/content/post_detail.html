@@ -86,6 +86,12 @@
           </div>
         {% endif %}
         {% include "dashboard/_field.html" with field=comment_form.body %}
+        {% if comment_form.captcha %}
+          {{ comment_form.captcha }}
+          {% if comment_form.captcha.errors %}
+            <p class="text-sm text-red-600">{{ comment_form.captcha.errors.0 }}</p>
+          {% endif %}
+        {% endif %}
         <button type="submit" class="rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-paper transition-transform hover:-translate-y-0.5">
           Post comment
         </button>
