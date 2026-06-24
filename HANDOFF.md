@@ -63,15 +63,14 @@ Layering enforced everywhere: `view → service → repository → manager/Query
      Guard test: `test_home_has_a11y_shell_landmarks`. (Public list/detail templates still use
      `ink/accent/paper` aliases — they render correctly via the alias bridge; pure cosmetic
      rename to semantic names is optional, deferrable.)
-   - ☐ **RESUME HERE → U4 admin shell + dark-mode toggle.** Tokens + `.dark` are ready; the
-     toggle is an ADMIN feature (DESIGN_SYSTEM §2/§5 topbar). Work: migrate the ~15
-     `apps/dashboard/templates/*` + `dashboard/base.html` off hardcoded `bg-white`/status
-     colours (`bg-green-100` in post_list/plugins) to tokens (`bg-surface`/`surface-2`,
-     semantic `success/warning/error` badges); sidebar active = `surface-2` + 2px `primary`
-     left bar + mono group labels; topbar: add dark/light toggle (Alpine + localStorage + a
-     no-FOUC inline `<script>` in dashboard base that sets `.dark` on <html> before paint) +
-     avatar dropdown; messages → semantic Alert banners. Also `admin.css` `.dp-form` + Trix
-     chrome. Then U5 components, U6 a11y, U7 perf/Lighthouse. **U4 admin shell** (sidebar
+   - ☑ U4 admin shell + dark mode DONE: `dashboard/base.html` sidebar(260px)/topbar(56px) on
+     tokens; no-FOUC inline script sets `.dark` from `localStorage('admin-theme')`/system pref;
+     topbar dark/light toggle (Alpine+localStorage, sun/moon) + avatar dropdown + `#content`;
+     `_navlink` active = surface-2 + 2px primary bar + aria-current; ALL dashboard/media
+     templates off `bg-white`→`bg-surface`; status badges → `success-bg/success`/`surface-2`;
+     `admin.css` `.dp-form`+Trix on tokens. Guard: `test_dashboard_shell_has_dark_toggle_and_landmarks`.
+     Zero hardcoded `bg-white`/palette colours remain anywhere (grep CLEAN).
+   - ☐ **RESUME HERE → U5 components, U6 a11y, U7 perf.** **U4 admin shell** (sidebar
      style, topbar **dark/light toggle** wiring `darkMode:"class"` + localStorage, avatar
      dropdown, semantic alerts), **U5 components** (breadcrumbs, dropdown, avatar, dropzone,
      sortable, modals, toasts, table bulk-select, empty states, badges, rich-text toolbar),
