@@ -22,7 +22,7 @@
         {% for error in form.body.errors %}<p class="mt-1 text-sm text-accent">{{ error }}</p>{% endfor %}
       </div>
 
-      <details class="rounded-2xl border border-ink/10 bg-white p-5" {% if form.meta_title.value or form.meta_description.value or form.canonical_url.value %}open{% endif %}>
+      <details class="rounded-2xl border border-ink/10 bg-surface p-5" {% if form.meta_title.value or form.meta_description.value or form.canonical_url.value %}open{% endif %}>
         <summary class="cursor-pointer text-sm font-semibold text-ink">SEO &amp; sharing</summary>
         <div class="mt-4 space-y-5">
           {% include "dashboard/_field.html" with field=form.meta_title %}
@@ -36,14 +36,14 @@
 
     <!-- Meta sidebar -->
     <aside class="space-y-5">
-      <div class="rounded-2xl border border-ink/10 bg-white p-5">
+      <div class="rounded-2xl border border-ink/10 bg-surface p-5">
         {% if form.status %}{% include "dashboard/_field.html" with field=form.status %}{% endif %}
         <button type="submit"
                 class="mt-4 w-full rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-paper transition-transform hover:-translate-y-0.5">
           Save post
         </button>
       </div>
-      <div class="space-y-5 rounded-2xl border border-ink/10 bg-white p-5">
+      <div class="space-y-5 rounded-2xl border border-ink/10 bg-surface p-5">
         {% include "dashboard/_field.html" with field=form.categories %}
         {% include "dashboard/_field.html" with field=form.tags %}
         {% include "dashboard/_field.html" with field=form.featured_image %}

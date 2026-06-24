@@ -4,9 +4,9 @@
 <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
   <form method="get" class="flex items-center gap-2">
     <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Search posts…"
-           class="rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-accent" />
+           class="rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm outline-none focus:border-accent" />
     <select name="status" onchange="this.form.submit()"
-            class="rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-accent">
+            class="rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm outline-none focus:border-accent">
       <option value="">All statuses</option>
       <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>Draft</option>
       <option value="published" {% if request.GET.status == 'published' %}selected{% endif %}>Published</option>
@@ -20,7 +20,7 @@
   {% endif %}
 </div>
 
-<div class="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+<div class="overflow-hidden rounded-2xl border border-ink/10 bg-surface">
   <table class="w-full text-sm">
     <thead class="border-b border-ink/10 text-left text-xs uppercase tracking-wide text-ink/40">
       <tr>
@@ -38,7 +38,7 @@
             <a href="{% url 'dashboard:post_edit' post.pk %}" class="font-medium text-ink hover:text-accent">{{ post.title }}</a>
           </td>
           <td class="px-5 py-3">
-            <span class="rounded-full px-2 py-0.5 text-xs {% if post.is_published %}bg-green-100 text-green-800{% else %}bg-ink/5 text-ink/60{% endif %}">
+            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {% if post.is_published %}bg-success-bg text-success{% else %}bg-surface-2 text-text-muted{% endif %}">
               {{ post.get_status_display }}
             </span>
           </td>
