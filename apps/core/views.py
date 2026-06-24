@@ -1,6 +1,6 @@
 from django.views.generic import TemplateView
 
-from apps.content.models import Post, Service
+from . import services
 
 
 class HomeView(TemplateView):
@@ -11,8 +11,5 @@ class HomeView(TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["recent_posts"] = (
-            Post.objects.published().select_related("author").prefetch_related("categories")[:3]
-        )
-        ctx["featured_services"] = Service.objects.published()[:3]
+        ctx.update(services.home_context())
         return ctx

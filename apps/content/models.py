@@ -96,6 +96,17 @@ class PublishableQuerySet(TranslatableQuerySet):
     def drafts(self) -> models.QuerySet:
         return self.filter(status=Status.DRAFT)
 
+    def editable_by(self, user) -> models.QuerySet:
+        """Posts ``user`` may manage in the dashboard.
+
+        Content managers (those who can delete any post — Editors/Admins) see
+        everything; Authors/Contributors are scoped to their own posts. Returns a
+        chainable queryset so callers can add ``.published()``/ordering/prefetch.
+        """
+        if user.has_perm("content.delete_post"):
+            return self
+        return self.filter(author=user)
+
 
 PublishableManager = TranslatableManager.from_queryset(PublishableQuerySet)
 
@@ -179,6 +190,23 @@ class Post(SeoFieldsMixin, TranslatableModel, TimeStampedModel):
         if not user.is_authenticated:
             return False
         return user == self.author or user.has_perm("content.delete_post")
+
+    def gate_publish_state(self, user) -> None:
+        """Constrain this post's ``status`` to what ``user`` is allowed to set.
+
+        Users without ``content.publish_post`` may not change the publish state:
+        a new post is forced to DRAFT; an edited post keeps its stored status, so
+        editing a post an Editor already published never silently unpublishes it
+        (and a Contributor still can't publish a draft themselves). A no-op for
+        users who may publish. Call before saving.
+        """
+        if user.has_perm("content.publish_post"):
+            return
+        if self.pk:
+            # status is a shared (untranslated) field; fetch just it.
+            self.status = Post.objects.only("status").get(pk=self.pk).status
+        else:
+            self.status = Status.DRAFT
 
 
 class Page(SeoFieldsMixin, TranslatableModel, TimeStampedModel):

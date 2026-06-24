@@ -1,0 +1,97 @@
+"""Public content services — orchestration for the content views.
+
+Views stay at the HTTP boundary; these services hold the visibility rules and
+context assembly and delegate ALL data access to repositories
+(``apps.content.repositories``, ``apps.comments.repositories``). No ``Model.objects``
+here. Raising ``Http404`` is a not-found signal the view re-raises.
+"""
+
+from __future__ import annotations
+
+from django.db.models import QuerySet
+from django.http import Http404
+
+from apps.comments.forms import CommentForm
+from apps.comments.repositories import CommentRepository
+from apps.core.models import SiteSettings
+
+from .models import Category, Page, Post, Service, Tag
+from .repositories import (
+    CategoryRepository,
+    PageRepository,
+    PostRepository,
+    ServiceRepository,
+    TagRepository,
+)
+
+
+def list_published_posts() -> QuerySet:
+    """Published posts for public lists, with author + taxonomy prefetched."""
+    return PostRepository.published()
+
+
+def get_category(slug: str) -> Category:
+    """The category with ``slug`` or raise Http404."""
+    return CategoryRepository.get_by_slug(slug)
+
+
+def get_tag(slug: str) -> Tag:
+    """The tag with ``slug`` or raise Http404."""
+    return TagRepository.get_by_slug(slug)
+
+
+def posts_in_category(category: Category) -> QuerySet:
+    """Published posts filed under ``category``."""
+    return PostRepository.published_in_category(category)
+
+
+def posts_with_tag(tag: Tag) -> QuerySet:
+    """Published posts carrying ``tag``."""
+    return PostRepository.published_with_tag(tag)
+
+
+def get_post_for_view(slug: str, user) -> Post:
+    """Fetch a post by slug, enforcing object-level visibility (Http404 if hidden)."""
+    post = PostRepository.get_by_slug(slug)
+    if not post.can_be_viewed_by(user):
+        raise Http404
+    return post
+
+
+def get_page_for_view(slug: str, user) -> Page:
+    """Fetch a page by slug, enforcing object-level visibility (Http404 if hidden)."""
+    page = PageRepository.get_by_slug(slug)
+    if not page.can_be_viewed_by(user):
+        raise Http404
+    return page
+
+
+def list_published_services() -> QuerySet:
+    """Published services for the public services index."""
+    return ServiceRepository.published()
+
+
+def get_service_for_view(slug: str, user) -> Service:
+    """Fetch a service by slug, enforcing object-level visibility (Http404 if hidden)."""
+    service = ServiceRepository.get_by_slug(slug)
+    if not service.can_be_viewed_by(user):
+        raise Http404
+    return service
+
+
+def post_detail_context(post: Post, user, comment_form: CommentForm | None = None) -> dict:
+    """Comment-related context for a post detail page.
+
+    Returns the comment toggles plus, when comments are enabled, the approved
+    top-level comment thread and a form (the caller may inject a bound form to
+    re-render validation errors).
+    """
+    site = SiteSettings.load()
+    ctx: dict = {
+        "comments_enabled": site.allow_comments,
+        "comments_require_login": site.comments_require_login,
+    }
+    if site.allow_comments:
+        ctx["comments"] = CommentRepository.approved_top_level(post)
+        ctx["comment_form"] = comment_form or CommentForm(user=user)
+    return ctx

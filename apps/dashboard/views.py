@@ -3,9 +3,8 @@ from __future__ import annotations
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-from django.db.models import Count, QuerySet
 from django.http import Http404
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import (
     CreateView,
@@ -17,14 +16,9 @@ from django.views.generic import (
 )
 from parler.views import TranslatableModelFormMixin
 
-from apps.comments.models import Comment, CommentStatus
-from apps.content.models import Category, Page, Post, Service, Status, Tag
-from apps.core.models import SiteSettings
-from apps.media.models import MediaAsset
-from apps.plugins import registry as plugins
-from apps.seo.models import SeoSettings
-from apps.themes import registry as themes
+from apps.content.models import Category, Page, Post, Service, Tag
 
+from . import services
 from .forms import (
     CategoryForm,
     PageForm,
@@ -77,17 +71,8 @@ class DashboardHomeView(AdminAccessMixin, SectionMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["stats"] = {
-            "posts": Post.objects.count(),
-            "pages": Page.objects.count(),
-            "media": MediaAsset.objects.count(),
-            "users": User.objects.count(),
-        }
-        # Non-managers only see their own recent posts (matches what they can edit).
-        recent = Post.objects.select_related("author")
-        if not self.request.user.has_perm("content.delete_post"):
-            recent = recent.filter(author=self.request.user)
-        ctx["recent_posts"] = recent[:6]
+        ctx["stats"] = services.dashboard_stats()
+        ctx["recent_posts"] = services.recent_posts(self.request.user)
         return ctx
 
 
@@ -95,20 +80,13 @@ class DashboardHomeView(AdminAccessMixin, SectionMixin, TemplateView):
 # Posts (owner-scoped for non-managers)
 # --------------------------------------------------------------------------- #
 class PostScopeMixin:
-    """Restrict posts to those the user may manage.
+    """Restrict edit/delete to posts the user may manage (Authors see only their own)."""
 
-    Managers (users who can delete any post — Editors/Admins) see everything;
-    Authors/Contributors see only their own.
-    """
-
-    def get_queryset(self) -> QuerySet:
-        qs = Post.objects.select_related("author")
-        if not self.request.user.has_perm("content.delete_post"):
-            qs = qs.filter(author=self.request.user)
-        return qs
+    def get_queryset(self):
+        return services.editable_posts(self.request.user)
 
 
-class PostListView(AdminAccessMixin, SectionMixin, PostScopeMixin, ListView):
+class PostListView(AdminAccessMixin, SectionMixin, ListView):
     permission_required = ("accounts.access_admin", "content.view_post")
     template_name = "dashboard/post_list.html"
     context_object_name = "posts"
@@ -116,16 +94,12 @@ class PostListView(AdminAccessMixin, SectionMixin, PostScopeMixin, ListView):
     section = "posts"
     heading = "Posts"
 
-    def get_queryset(self) -> QuerySet:
-        qs = super().get_queryset()
-        status = self.request.GET.get("status")
-        if status in Status.values:
-            qs = qs.filter(status=status)
-        search = self.request.GET.get("q")
-        if search:
-            # title is translated (parler) -> search through the translation table.
-            qs = qs.filter(translations__title__icontains=search).distinct()
-        return qs
+    def get_queryset(self):
+        return services.list_posts(
+            self.request.user,
+            status=self.request.GET.get("status"),
+            search=self.request.GET.get("q"),
+        )
 
 
 class PublishGatingMixin:
@@ -142,12 +116,7 @@ class PublishGatingMixin:
         return kwargs
 
     def form_valid(self, form):
-        if not self.request.user.has_perm("content.publish_post"):
-            if form.instance.pk:
-                # status is a shared (untranslated) field; fetch just it.
-                form.instance.status = Post.objects.only("status").get(pk=form.instance.pk).status
-            else:
-                form.instance.status = Status.DRAFT
+        form.instance.gate_publish_state(self.request.user)
         return super().form_valid(form)
 
 
@@ -163,7 +132,7 @@ class PostCreateView(
     heading = "New post"
 
     def form_valid(self, form):
-        form.instance.author = self.request.user
+        services.prepare_new_post(form.instance, self.request.user)
         messages.success(self.request, "Post created.")
         return super().form_valid(form)
 
@@ -208,9 +177,9 @@ class PageListView(AdminAccessMixin, SectionMixin, ListView):
     paginate_by = 20
     section = "pages"
     heading = "Pages"
-    # Models lost their Meta ordering (it referenced now-translated fields), so
-    # order on a shared field here for stable pagination.
-    queryset = Page.objects.select_related("author").order_by("-created_at")
+
+    def get_queryset(self):
+        return services.list_pages()
 
 
 class PageCreateView(AdminAccessMixin, SectionMixin, DashboardTranslatableFormMixin, CreateView):
@@ -223,7 +192,7 @@ class PageCreateView(AdminAccessMixin, SectionMixin, DashboardTranslatableFormMi
     heading = "New page"
 
     def form_valid(self, form):
-        form.instance.author = self.request.user
+        services.prepare_new_page(form.instance, self.request.user)
         messages.success(self.request, "Page created.")
         return super().form_valid(form)
 
@@ -259,7 +228,9 @@ class ServiceListView(AdminAccessMixin, SectionMixin, ListView):
     paginate_by = 20
     section = "services"
     heading = "Services"
-    queryset = Service.objects.select_related("author").order_by("-created_at")
+
+    def get_queryset(self):
+        return services.list_services()
 
 
 class ServiceCreateView(AdminAccessMixin, SectionMixin, DashboardTranslatableFormMixin, CreateView):
@@ -272,7 +243,7 @@ class ServiceCreateView(AdminAccessMixin, SectionMixin, DashboardTranslatableFor
     heading = "New service"
 
     def form_valid(self, form):
-        form.instance.author = self.request.user
+        services.prepare_new_service(form.instance, self.request.user)
         messages.success(self.request, "Service created.")
         return super().form_valid(form)
 
@@ -307,11 +278,9 @@ class CategoryListView(AdminAccessMixin, SectionMixin, ListView):
     context_object_name = "categories"
     section = "categories"
     heading = "Categories"
-    queryset = (
-        Category.objects.select_related("parent")
-        .annotate(post_count=Count("posts"))
-        .order_by("slug")
-    )
+
+    def get_queryset(self):
+        return services.list_categories()
 
 
 class CategoryCreateView(
@@ -351,7 +320,9 @@ class TagListView(AdminAccessMixin, SectionMixin, ListView):
     context_object_name = "tags"
     section = "tags"
     heading = "Tags"
-    queryset = Tag.objects.annotate(post_count=Count("posts")).order_by("slug")
+
+    def get_queryset(self):
+        return services.list_tags()
 
 
 class TagCreateView(AdminAccessMixin, SectionMixin, DashboardTranslatableFormMixin, CreateView):
@@ -391,7 +362,9 @@ class UserListView(AdminAccessMixin, SectionMixin, ListView):
     paginate_by = 25
     section = "users"
     heading = "Users"
-    queryset = User.objects.prefetch_related("groups").order_by("username")
+
+    def get_queryset(self):
+        return services.list_users()
 
 
 class UserUpdateView(AdminAccessMixin, SectionMixin, UpdateView):
@@ -402,6 +375,9 @@ class UserUpdateView(AdminAccessMixin, SectionMixin, UpdateView):
     success_url = reverse_lazy("dashboard:user_list")
     section = "users"
     heading = "Edit user"
+
+    def get_object(self, queryset=None):
+        return services.get_user(self.kwargs["pk"])
 
     def dispatch(self, request, *args, **kwargs):
         # Guard against self-lockout: managers can't change their own roles or
@@ -427,8 +403,8 @@ class ThemeListView(AdminAccessMixin, SectionMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["themes"] = themes.get_available_themes()
-        ctx["active_slug"] = themes.get_active_theme_slug()
+        ctx["themes"] = services.available_themes()
+        ctx["active_slug"] = services.active_theme_slug()
         return ctx
 
 
@@ -437,7 +413,7 @@ class ThemeActivateView(AdminAccessMixin, View):
     http_method_names = ["post"]
 
     def post(self, request, slug: str):
-        if themes.activate_theme(slug):
+        if services.activate_theme(slug):
             messages.success(request, f"Theme “{slug}” activated.")
         else:
             messages.error(request, "Unknown theme.")
@@ -455,10 +431,7 @@ class PluginListView(AdminAccessMixin, SectionMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["plugins"] = [
-            {"info": info, "enabled": plugins.is_plugin_enabled(info.slug)}
-            for info in plugins.get_installed_plugins()
-        ]
+        ctx["plugins"] = services.installed_plugins_with_state()
         return ctx
 
 
@@ -467,8 +440,8 @@ class PluginToggleView(AdminAccessMixin, View):
     http_method_names = ["post"]
 
     def post(self, request, slug: str):
-        now_enabled = not plugins.is_plugin_enabled(slug)
-        if plugins.set_enabled(slug, now_enabled):
+        now_enabled = not services.is_plugin_enabled(slug)
+        if services.set_plugin_enabled(slug, now_enabled):
             messages.success(
                 request, f"Plugin “{slug}” {'enabled' if now_enabled else 'disabled'}."
             )
@@ -488,8 +461,8 @@ class SettingsView(AdminAccessMixin, SectionMixin, UpdateView):
     section = "settings"
     heading = "Settings"
 
-    def get_object(self, queryset=None) -> SiteSettings:
-        return SiteSettings.load()
+    def get_object(self, queryset=None):
+        return services.load_site_settings()
 
     def form_valid(self, form):
         messages.success(self.request, "Settings saved.")
@@ -504,8 +477,8 @@ class SeoSettingsView(AdminAccessMixin, SectionMixin, UpdateView):
     section = "seo"
     heading = "SEO"
 
-    def get_object(self, queryset=None) -> SeoSettings:
-        return SeoSettings.load()
+    def get_object(self, queryset=None):
+        return services.load_seo_settings()
 
     def form_valid(self, form):
         messages.success(self.request, "SEO settings saved.")
@@ -523,18 +496,15 @@ class CommentListView(AdminAccessMixin, SectionMixin, ListView):
     section = "comments"
     heading = "Comments"
 
-    def get_queryset(self) -> QuerySet:
-        qs = Comment.objects.select_related("post", "user").order_by("-created_at")
+    def get_queryset(self):
         self.status = self.request.GET.get("status")
-        if self.status in CommentStatus.values:
-            qs = qs.filter(status=self.status)
-        return qs
+        return services.list_comments(self.status)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["status"] = self.status
-        ctx["statuses"] = CommentStatus.choices
-        ctx["pending_count"] = Comment.objects.pending().count()
+        ctx["statuses"] = services.comment_status_choices()
+        ctx["pending_count"] = services.pending_comment_count()
         return ctx
 
 
@@ -542,21 +512,11 @@ class CommentModerateView(AdminAccessMixin, View):
     permission_required = ("accounts.access_admin", "comments.moderate_comment")
     http_method_names = ["post"]
 
-    _ACTIONS = {
-        "approve": (CommentStatus.APPROVED, "Comment approved."),
-        "spam": (CommentStatus.SPAM, "Comment marked as spam."),
-    }
-
     def post(self, request, pk: int, action: str):
-        comment = get_object_or_404(Comment, pk=pk)
-        if action == "delete":
-            comment.delete()
-            messages.success(request, "Comment deleted.")
-        elif action in self._ACTIONS:
-            status, message = self._ACTIONS[action]
-            comment.status = status
-            comment.save(update_fields=["status"])
-            messages.success(request, message)
-        else:
-            raise Http404
+        comment = services.get_comment(pk)
+        try:
+            message = services.moderate_comment(comment, action)
+        except ValueError as exc:
+            raise Http404 from exc
+        messages.success(request, message)
         return redirect("dashboard:comment_list")
