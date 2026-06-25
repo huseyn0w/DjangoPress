@@ -44,7 +44,10 @@ class PostViewSet(LanguageScopedMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         # Reads (and the permission check's model probe for anon writers) use the
         # published set; authenticated writers get their owner-scoped set.
-        if self.request.method in permissions.SAFE_METHODS or not self.request.user.is_authenticated:
+        if (
+            self.request.method in permissions.SAFE_METHODS
+            or not self.request.user.is_authenticated
+        ):
             return services.published_posts()
         return services.editable_posts(self.request.user)
 

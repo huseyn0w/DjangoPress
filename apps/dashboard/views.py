@@ -266,7 +266,11 @@ class PageListView(AdminAccessMixin, SectionMixin, ListView):
 
 
 class PageCreateView(
-    AdminAccessMixin, SectionMixin, MediaPickerContextMixin, DashboardTranslatableFormMixin, CreateView
+    AdminAccessMixin,
+    SectionMixin,
+    MediaPickerContextMixin,
+    DashboardTranslatableFormMixin,
+    CreateView,
 ):
     permission_required = ("accounts.access_admin", "content.add_page")
     model = Page
@@ -283,7 +287,11 @@ class PageCreateView(
 
 
 class PageUpdateView(
-    AdminAccessMixin, SectionMixin, MediaPickerContextMixin, DashboardTranslatableFormMixin, UpdateView
+    AdminAccessMixin,
+    SectionMixin,
+    MediaPickerContextMixin,
+    DashboardTranslatableFormMixin,
+    UpdateView,
 ):
     permission_required = ("accounts.access_admin", "content.change_page")
     model = Page
@@ -351,9 +359,7 @@ class PageRevisionListView(AdminAccessMixin, SectionMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx.update(
-            services.page_revisions_context(
-                self.kwargs["pk"], self.request.GET.get("revision")
-            )
+            services.page_revisions_context(self.kwargs["pk"], self.request.GET.get("revision"))
         )
         return ctx
 
@@ -384,7 +390,11 @@ class ServiceListView(AdminAccessMixin, SectionMixin, ListView):
 
 
 class ServiceCreateView(
-    AdminAccessMixin, SectionMixin, MediaPickerContextMixin, DashboardTranslatableFormMixin, CreateView
+    AdminAccessMixin,
+    SectionMixin,
+    MediaPickerContextMixin,
+    DashboardTranslatableFormMixin,
+    CreateView,
 ):
     permission_required = ("accounts.access_admin", "content.add_service")
     model = Service
@@ -401,7 +411,11 @@ class ServiceCreateView(
 
 
 class ServiceUpdateView(
-    AdminAccessMixin, SectionMixin, MediaPickerContextMixin, DashboardTranslatableFormMixin, UpdateView
+    AdminAccessMixin,
+    SectionMixin,
+    MediaPickerContextMixin,
+    DashboardTranslatableFormMixin,
+    UpdateView,
 ):
     permission_required = ("accounts.access_admin", "content.change_service")
     model = Service

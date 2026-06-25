@@ -72,7 +72,9 @@ def test_edit_item_updates_label(client, make_user):
     client.force_login(make_user("boss", role="Administrator"))
     menu = Menu.objects.create(name="Primary", slug="primary")
     item = MenuItem.objects.create(menu=menu, label="Old", url="/x/")
-    assert client.get(reverse("dashboard:menu_item_edit", args=[menu.pk, item.pk])).status_code == 200
+    assert (
+        client.get(reverse("dashboard:menu_item_edit", args=[menu.pk, item.pk])).status_code == 200
+    )
     client.post(
         reverse("dashboard:menu_item_edit", args=[menu.pk, item.pk]),
         {"label": "New", "link_type": LinkType.CUSTOM, "url": "/x/"},

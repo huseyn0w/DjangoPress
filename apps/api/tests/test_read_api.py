@@ -68,7 +68,10 @@ def test_page_detail(client):
 
 def test_service_detail_includes_faq(client):
     Service.objects.create(
-        title="SEO", slug="seo", summary="We do SEO.", status=Status.PUBLISHED,
+        title="SEO",
+        slug="seo",
+        summary="We do SEO.",
+        status=Status.PUBLISHED,
         faq="Q: How?\nA: Well.",
     )
     data = client.get("/api/v1/services/seo/").json()

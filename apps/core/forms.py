@@ -14,7 +14,9 @@ class ContactForm(forms.Form):
 
     name = forms.CharField(max_length=120)
     email = forms.EmailField()
-    message = forms.CharField(widget=forms.Textarea(attrs={"rows": 5, "placeholder": "How can we help?"}))
+    message = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 5, "placeholder": "How can we help?"})
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

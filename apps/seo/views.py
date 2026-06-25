@@ -23,9 +23,7 @@ def robots_txt(request) -> HttpResponse:
 
 
 def llms_txt(request) -> HttpResponse:
-    return HttpResponse(
-        services.llms_txt_body(request.build_absolute_uri), content_type=_MARKDOWN
-    )
+    return HttpResponse(services.llms_txt_body(request.build_absolute_uri), content_type=_MARKDOWN)
 
 
 def llms_full_txt(request) -> HttpResponse:

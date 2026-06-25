@@ -39,5 +39,7 @@ def build_storages(env) -> dict:
     ``staticfiles`` is always WhiteNoise; ``default`` is S3 when ``USE_S3_MEDIA``
     is truthy, otherwise local disk.
     """
-    default_backend = _s3_backend(env) if env.bool("USE_S3_MEDIA", default=False) else _LOCAL_BACKEND
+    default_backend = (
+        _s3_backend(env) if env.bool("USE_S3_MEDIA", default=False) else _LOCAL_BACKEND
+    )
     return {"default": default_backend, "staticfiles": _STATIC_BACKEND}

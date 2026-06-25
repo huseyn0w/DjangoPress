@@ -66,15 +66,15 @@ class PostWriteSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200)
     excerpt = serializers.CharField(required=False, allow_blank=True)
     body = serializers.CharField(required=False, allow_blank=True)
-    status = serializers.ChoiceField(
-        choices=Status.choices, required=False, default=Status.DRAFT
-    )
+    status = serializers.ChoiceField(choices=Status.choices, required=False, default=Status.DRAFT)
 
     def create(self, validated_data):
         return content_services.api_create_post(validated_data, self.context["request"].user)
 
     def update(self, instance, validated_data):
-        return content_services.api_update_post(instance, validated_data, self.context["request"].user)
+        return content_services.api_update_post(
+            instance, validated_data, self.context["request"].user
+        )
 
 
 class PageSerializer(serializers.Serializer):

@@ -32,7 +32,10 @@ def test_create_post_tool(client, make_user, auth_headers):
     author = make_user("a", role="Author")
     data = _rpc(
         client,
-        {"method": "tools/call", "params": {"name": "posts.create", "arguments": {"title": "Via MCP"}}},
+        {
+            "method": "tools/call",
+            "params": {"name": "posts.create", "arguments": {"title": "Via MCP"}},
+        },
         **auth_headers(author),
     ).json()
     assert data["result"]["title"] == "Via MCP"
@@ -68,8 +71,13 @@ def test_moderate_comment_tool(client, make_user, auth_headers):
     comment = Comment.objects.create(post=post, name="Guest", body="hi")
     _rpc(
         client,
-        {"method": "tools/call",
-         "params": {"name": "comments.moderate", "arguments": {"id": comment.pk, "action": "approve"}}},
+        {
+            "method": "tools/call",
+            "params": {
+                "name": "comments.moderate",
+                "arguments": {"id": comment.pk, "action": "approve"},
+            },
+        },
         **auth_headers(editor),
     )
     comment.refresh_from_db()

@@ -33,9 +33,7 @@ def test_revision_list_shows_history(client, make_user):
 def test_revision_diff_is_shown_when_selected(client, make_user):
     editor = make_user("ed", role="Editor")
     # Bodies share a line so the diff exercises equal + changed rows.
-    post = Post.objects.create(
-        title="V1", body="<p>one</p>\n<p>shared</p>", author=editor
-    )
+    post = Post.objects.create(title="V1", body="<p>one</p>\n<p>shared</p>", author=editor)
     _edit(post, "V2", "<p>two</p>\n<p>shared</p>")
     first = post.revisions.order_by("created_at").first()
 
@@ -54,9 +52,7 @@ def test_restore_reverts_content_and_keeps_history(client, make_user):
     first = post.revisions.order_by("created_at").first()
 
     client.force_login(editor)
-    response = client.post(
-        reverse("dashboard:post_revision_restore", args=[post.pk, first.pk])
-    )
+    response = client.post(reverse("dashboard:post_revision_restore", args=[post.pk, first.pk]))
     assert response.status_code == 302
 
     fresh = Post.objects.get(pk=post.pk)
@@ -74,9 +70,7 @@ def test_contributor_cannot_restore_others_revision(client, make_user):
     rev = post.revisions.first()
 
     client.force_login(contributor)
-    response = client.post(
-        reverse("dashboard:post_revision_restore", args=[post.pk, rev.pk])
-    )
+    response = client.post(reverse("dashboard:post_revision_restore", args=[post.pk, rev.pk]))
     assert response.status_code == 404
 
 
@@ -106,9 +100,7 @@ def test_page_revision_list_and_diff(client, make_user):
     assert response.status_code == 200
     assert response.content.count(b"Restore") >= 2
 
-    diff = client.get(
-        reverse("dashboard:page_revisions", args=[page.pk]) + f"?revision={first.pk}"
-    )
+    diff = client.get(reverse("dashboard:page_revisions", args=[page.pk]) + f"?revision={first.pk}")
     assert diff.status_code == 200
     assert b"diff" in diff.content.lower()
 
@@ -122,9 +114,7 @@ def test_page_revision_restore(client, make_user):
     first = page.revisions.order_by("created_at").first()
 
     client.force_login(editor)
-    response = client.post(
-        reverse("dashboard:page_revision_restore", args=[page.pk, first.pk])
-    )
+    response = client.post(reverse("dashboard:page_revision_restore", args=[page.pk, first.pk]))
     assert response.status_code == 302
     fresh = Page.objects.get(pk=page.pk)
     assert fresh.safe_translation_getter("title") == "P1"

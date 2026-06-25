@@ -61,9 +61,7 @@ class PostDetailView(DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx.update(
-            services.post_detail_context(
-                self.object, self.request.user, ctx.get("comment_form")
-            )
+            services.post_detail_context(self.object, self.request.user, ctx.get("comment_form"))
         )
         return ctx
 

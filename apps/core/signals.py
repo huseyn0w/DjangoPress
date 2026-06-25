@@ -25,7 +25,5 @@ def email_contact_message(sender, cleaned, **kwargs) -> None:
     email = cleaned.get("email", "")
     subject = f"Contact form: {name}"
     body = f"From: {name} <{email}>\n\n{cleaned.get('message', '')}\n"
-    message = EmailMessage(
-        subject, body, to=[recipient], reply_to=[email] if email else None
-    )
+    message = EmailMessage(subject, body, to=[recipient], reply_to=[email] if email else None)
     message.send(fail_silently=True)

@@ -19,9 +19,7 @@ class PostRepository:
     @staticmethod
     def published() -> QuerySet:
         return (
-            Post.objects.published()
-            .select_related("author")
-            .prefetch_related("categories", "tags")
+            Post.objects.published().select_related("author").prefetch_related("categories", "tags")
         )
 
     @staticmethod
@@ -35,9 +33,7 @@ class PostRepository:
     @staticmethod
     def recent_published(limit: int) -> QuerySet:
         return (
-            Post.objects.published()
-            .select_related("author")
-            .prefetch_related("categories")[:limit]
+            Post.objects.published().select_related("author").prefetch_related("categories")[:limit]
         )
 
     @staticmethod
@@ -118,11 +114,7 @@ class PostRepository:
     @staticmethod
     def published_indexable(limit: int) -> QuerySet:
         """Published, non-noindex posts for crawler surfaces (llms.txt), capped."""
-        return (
-            Post.objects.published()
-            .filter(noindex=False)
-            .select_related("author")[:limit]
-        )
+        return Post.objects.published().filter(noindex=False).select_related("author")[:limit]
 
     @staticmethod
     def for_feed(limit: int) -> QuerySet:

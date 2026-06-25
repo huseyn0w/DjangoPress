@@ -55,7 +55,11 @@ def _post_dict(post, full: bool = False) -> dict:
 
 
 def _taxonomy_dict(obj) -> dict:
-    return {"id": obj.pk, "slug": obj.slug, "name": obj.safe_translation_getter("name", any_language=True)}
+    return {
+        "id": obj.pk,
+        "slug": obj.slug,
+        "name": obj.safe_translation_getter("name", any_language=True),
+    }
 
 
 # --- handlers (user, arguments) -> JSON-serialisable result --- #
@@ -90,9 +94,17 @@ def _delete_post(user, args) -> dict:
 
 def _list_pages(user, args) -> dict:
     pages = PageRepository.all_for_admin()[:50]
-    return {"pages": [{"id": p.pk, "slug": p.slug,
-                       "title": p.safe_translation_getter("title", any_language=True),
-                       "status": p.status} for p in pages]}
+    return {
+        "pages": [
+            {
+                "id": p.pk,
+                "slug": p.slug,
+                "title": p.safe_translation_getter("title", any_language=True),
+                "status": p.status,
+            }
+            for p in pages
+        ]
+    }
 
 
 def _list_categories(user, args) -> dict:
@@ -111,39 +123,85 @@ def _moderate_comment(user, args) -> dict:
 
 def _list_media(user, args) -> dict:
     assets = MediaRepository.all()[:50]
-    return {"media": [{"id": a.pk, "title": str(a), "url": a.file.url,
-                       "mime_type": a.mime_type} for a in assets]}
+    return {
+        "media": [
+            {"id": a.pk, "title": str(a), "url": a.file.url, "mime_type": a.mime_type}
+            for a in assets
+        ]
+    }
 
 
 def _list_users(user, args) -> dict:
     users = UserRepository.all_with_groups()
-    return {"users": [{"id": u.pk, "username": u.get_username(),
-                       "name": u.display_name, "roles": u.role_names} for u in users]}
+    return {
+        "users": [
+            {
+                "id": u.pk,
+                "username": u.get_username(),
+                "name": u.display_name,
+                "roles": u.role_names,
+            }
+            for u in users
+        ]
+    }
 
 
 def _get_settings(user, args) -> dict:
     settings = SiteSettingsRepository.get()
-    return {"site_name": settings.site_name, "tagline": settings.tagline,
-            "allow_comments": settings.allow_comments}
+    return {
+        "site_name": settings.site_name,
+        "tagline": settings.tagline,
+        "allow_comments": settings.allow_comments,
+    }
 
 
 TOOLS: list[Tool] = [
     Tool("posts.list", "List posts you may manage.", ("content.view_post",), _list_posts),
-    Tool("posts.get", "Get one post by id.", ("content.view_post",), _get_post,
-         {"id": {"type": "integer"}}),
-    Tool("posts.create", "Create a post.", ("content.add_post",), _create_post,
-         {"title": {"type": "string"}, "body": {"type": "string"}, "status": {"type": "string"}}),
-    Tool("posts.update", "Update a post.", ("content.change_post",), _update_post,
-         {"id": {"type": "integer"}, "title": {"type": "string"}, "body": {"type": "string"}}),
-    Tool("posts.publish", "Publish a post.", ("content.publish_post",), _publish_post,
-         {"id": {"type": "integer"}}),
-    Tool("posts.delete", "Move a post to trash.", ("content.delete_post",), _delete_post,
-         {"id": {"type": "integer"}}),
+    Tool(
+        "posts.get",
+        "Get one post by id.",
+        ("content.view_post",),
+        _get_post,
+        {"id": {"type": "integer"}},
+    ),
+    Tool(
+        "posts.create",
+        "Create a post.",
+        ("content.add_post",),
+        _create_post,
+        {"title": {"type": "string"}, "body": {"type": "string"}, "status": {"type": "string"}},
+    ),
+    Tool(
+        "posts.update",
+        "Update a post.",
+        ("content.change_post",),
+        _update_post,
+        {"id": {"type": "integer"}, "title": {"type": "string"}, "body": {"type": "string"}},
+    ),
+    Tool(
+        "posts.publish",
+        "Publish a post.",
+        ("content.publish_post",),
+        _publish_post,
+        {"id": {"type": "integer"}},
+    ),
+    Tool(
+        "posts.delete",
+        "Move a post to trash.",
+        ("content.delete_post",),
+        _delete_post,
+        {"id": {"type": "integer"}},
+    ),
     Tool("pages.list", "List pages.", ("content.view_page",), _list_pages),
     Tool("categories.list", "List categories.", ("content.view_category",), _list_categories),
     Tool("tags.list", "List tags.", ("content.view_tag",), _list_tags),
-    Tool("comments.moderate", "Approve/spam/delete a comment.", ("comments.moderate_comment",),
-         _moderate_comment, {"id": {"type": "integer"}, "action": {"type": "string"}}),
+    Tool(
+        "comments.moderate",
+        "Approve/spam/delete a comment.",
+        ("comments.moderate_comment",),
+        _moderate_comment,
+        {"id": {"type": "integer"}, "action": {"type": "string"}},
+    ),
     Tool("media.list", "List media assets.", ("media.view_mediaasset",), _list_media),
     Tool("users.list", "List users and roles.", ("accounts.manage_users",), _list_users),
     Tool("settings.get", "Read site settings.", ("accounts.manage_settings",), _get_settings),
