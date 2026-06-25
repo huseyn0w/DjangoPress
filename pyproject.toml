@@ -34,8 +34,14 @@ DJANGO_SETTINGS_MODULE = "config.settings.test"
 python_files = ["tests.py", "test_*.py", "*_test.py"]
 # --ds is highest precedence, so the suite always runs under test settings even
 # when the container sets DJANGO_SETTINGS_MODULE=dev in the environment.
-addopts = "-ra --strict-markers --ds=config.settings.test"
+addopts = "-ra --strict-markers --ds=config.settings.test -m 'not e2e'"
 testpaths = ["apps", "tests"]
+markers = [
+    # Browser journeys are slow and need Chromium + a built frontend, so they are
+    # excluded from the default run. Invoke them with:
+    #   pytest tests/e2e -m e2e --ds=config.settings.test_e2e
+    "e2e: end-to-end Playwright browser journeys (excluded from the default run)",
+]
 filterwarnings = [
     # whitenoise warns when STATIC_ROOT is empty (before collectstatic) — benign in tests.
     "ignore:No directory at:UserWarning",
