@@ -1,6 +1,6 @@
 # cmstack-django — HANDOFF
 
-_Last refresh: 2026-06-24. Read with [`REFACTOR_PLAN.md`](REFACTOR_PLAN.md),
+_Last refresh: 2026-06-25 (F6–F12 done; F13 next). Read with [`REFACTOR_PLAN.md`](REFACTOR_PLAN.md),
 [`../FEATURE_MATRIX.md`](../FEATURE_MATRIX.md), [`../DESIGN_SYSTEM.md`](../DESIGN_SYSTEM.md)._
 
 ## Current state (verified, not asserted)
