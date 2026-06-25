@@ -18,8 +18,12 @@ from .models import Category, Like, Page, Post, Service, Tag
 class PostRepository:
     @staticmethod
     def published() -> QuerySet:
+        # Prefetch `translations` so a parler title/excerpt per row never adds a
+        # query on list pages (no N+1) — independent of parler's request cache.
         return (
-            Post.objects.published().select_related("author").prefetch_related("categories", "tags")
+            Post.objects.published()
+            .select_related("author")
+            .prefetch_related("translations", "categories", "tags")
         )
 
     @staticmethod
@@ -33,7 +37,9 @@ class PostRepository:
     @staticmethod
     def recent_published(limit: int) -> QuerySet:
         return (
-            Post.objects.published().select_related("author").prefetch_related("categories")[:limit]
+            Post.objects.published()
+            .select_related("author")
+            .prefetch_related("translations", "categories")[:limit]
         )
 
     @staticmethod
