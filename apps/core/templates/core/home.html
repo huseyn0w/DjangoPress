@@ -72,7 +72,7 @@
 
     {# Real content — the landing showcases the CMS by rendering its own posts. #}
     {% if recent_posts %}
-    <section class="border-t border-ink/10">
+    <section class="border-t border-ink/10" data-testid="recent-posts">
       <div class="mx-auto max-w-5xl px-6 py-20 sm:py-24">
         <div class="reveal flex items-end justify-between gap-4">
           <div>
@@ -88,7 +88,7 @@
               {% if post.published_at %}{{ post.published_at|date:"M j, Y" }}{% endif %}
             </p>
             <h3 class="mt-2 text-xl font-semibold leading-snug tracking-tight">
-              <a href="{{ post.get_absolute_url }}" class="transition-colors group-hover:text-accent">{{ post.title }}</a>
+              <a href="{{ post.get_absolute_url }}" class="transition-colors group-hover:text-accent" data-testid="recent-post-link">{{ post.title }}</a>
             </h3>
             {% if post.excerpt %}
               <p class="mt-2 line-clamp-3 text-sm leading-relaxed text-text-muted">{{ post.excerpt }}</p>

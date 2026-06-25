@@ -61,7 +61,7 @@
       </thead>
       <tbody>
         {% for post in posts %}
-          <tr class="border-b border-border last:border-0">
+          <tr class="border-b border-border last:border-0" data-testid="post-row">
             {% if perms.content.delete_post %}
               <td class="px-5 py-3">
                 <input type="checkbox" value="{{ post.pk }}" x-model.number="selected"
@@ -70,7 +70,7 @@
               </td>
             {% endif %}
             <td class="px-5 py-3">
-              <a href="{% url 'dashboard:post_edit' post.pk %}" class="font-medium text-text hover:text-primary">{{ post.title }}</a>
+              <a href="{% url 'dashboard:post_edit' post.pk %}" class="font-medium text-text hover:text-primary" data-testid="post-row-title">{{ post.title }}</a>
             </td>
             <td class="px-5 py-3">
               {% if post.is_scheduled %}
@@ -91,7 +91,7 @@
                 <form method="post" action="{% url 'dashboard:post_delete' post.pk %}"
                       data-dp-confirm="Move this post to trash?">
                   {% csrf_token %}
-                  <button type="submit" class="text-xs text-text-subtle hover:text-primary">Trash</button>
+                  <button type="submit" class="text-xs text-text-subtle hover:text-primary" data-testid="post-trash">Trash</button>
                 </form>
               {% endif %}
             </td>

@@ -10,6 +10,7 @@ and need a browser, so they are auto-marked `e2e` and excluded from the default
 
 from __future__ import annotations
 
+import io
 from pathlib import Path
 
 import pytest
@@ -59,3 +60,25 @@ def admin_user(db):
     )
     user.groups.add(Group.objects.get(name="Administrator"))
     return user
+
+
+@pytest.fixture
+def png_upload():
+    """A small in-memory PNG as a Playwright file payload for upload journeys."""
+    from PIL import Image
+
+    buffer = io.BytesIO()
+    Image.new("RGB", (32, 32), color=(80, 120, 200)).save(buffer, format="PNG")
+    return {
+        "name": "e2e-upload.png",
+        "mimeType": "image/png",
+        "buffer": buffer.getvalue(),
+    }
+
+
+def login(page, live_server, username, password):
+    """Sign in through the real allauth form (shared by admin journeys)."""
+    page.goto(f"{live_server.url}/accounts/login/")
+    page.locator("input[name='login']").fill(username)
+    page.locator("input[name='password']").fill(password)
+    page.locator("button[type='submit']").first.click()

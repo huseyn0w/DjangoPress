@@ -243,3 +243,59 @@ Each phase: TDD, subagent-driven where parallelizable, adversarial verification 
   (SSE/stdio) MCP transport — both are large, infra-coupled, and hard to test headlessly. The
   tool registry + per-tool authorization are transport-agnostic, so an OAuth/SSE adapter can be
   layered on later without touching the tools. Flagged for prioritisation. No other discrepancies.
+
+---
+
+## 8. Per-layer test-status (Task 4) — every layer covered, none at zero
+
+Verified against the suite (**392 unit/integration passed, 10 e2e passed**; coverage ~97%).
+Each architectural layer has dedicated and/or transitive tests — none is at zero. Where a
+layer is exercised transitively (e.g. repositories through their services), that is noted.
+
+| Layer | Status | Representative tests |
+|---|---|---|
+| **Models / managers / querysets** | ☑ covered | `content/tests/test_models.py`, `test_managers.py`, `test_soft_delete.py`, `test_scheduled.py`, `test_likes.py`; `comments/tests/test_comments.py`; `media/tests/test_models.py`; `menus/tests/test_models.py`; `accounts/tests/test_models.py` |
+| **Views (HTTP boundary)** | ☑ covered | `content/tests/test_views.py` (+ `test_post_list_has_no_n_plus_one` query guard); `media/tests/test_views.py`; `dashboard/tests/test_posts.py`, `test_access.py`, `test_other_crud.py`, `test_trash.py`; `core/tests/test_home.py`, `test_contact.py`; `search/tests/test_search.py`; `accounts/tests/test_authors.py`, `test_profile.py`; `seo/tests/test_crawler_surface.py`; `api/tests/test_read_api.py`, `test_write_api.py`; `mcp/tests/test_mcp.py`; + `tests/e2e` browser journeys |
+| **Forms / serializers** | ☑ covered | `media/tests/test_forms.py` (upload validation); `comments/tests/test_recaptcha.py` (conditional captcha field); dashboard form behaviour in `dashboard/tests/test_posts.py`, `test_scheduled.py`, `test_seo.py`; DRF serializers via `api/tests/test_read_api.py` (parler-aware, `?lang=`) |
+| **Permissions** | ☑ covered | `content/tests/test_permissions.py`; `media/tests/test_permissions.py`; `dashboard/tests/test_access.py`; `accounts/tests/test_roles.py`; per-tool re-verification in `mcp/tests/test_mcp.py`; model-perm-gated writes in `api/tests/test_write_api.py` |
+| **Repositories** | ☑ covered (mostly transitive) | Exercised through their services: `content/tests/test_services.py`, `comments/tests/test_services.py`, `core/tests/test_services.py`, `dashboard/tests/test_services.py`, `media/tests/test_services.py`; `search/tests/test_search.py` drives `search/repositories` (the **Postgres FTS branch is covered only by the Postgres CI job** — SQLite tests hit the `icontains` fallback) |
+| **Services** | ☑ covered | `content/tests/test_services.py`, `comments/tests/test_services.py`, `core/tests/test_services.py`, `dashboard/tests/test_services.py`, `media/tests/test_services.py`, `search/tests/test_search.py`; `api.services` via `api/tests/*`; `mcp.services` via `mcp/tests/test_mcp.py` |
+| **Signals / receivers (observers)** | ☑ covered | `comments/tests/test_notifications.py` (`comment_created`→email); `core/tests/test_contact.py` (`contact_received`→email); revision-snapshot signal via `dashboard/tests/test_revisions.py` + `content/tests/test_models.py`; media file-cleanup signal via `media/tests/test_models.py`/`test_storage.py`; role sync (`post_migrate`) via `accounts/tests/test_roles.py`; plugin hook side effect via `plugins/tests/test_effect.py` |
+| **Templates** | ☑ covered | Rendered-and-asserted in view tests (`content/tests/test_views.py` prose/breadcrumb/chrome; `dashboard/tests/test_a11y.py`; `themes/tests/test_loader.py`; `seo/tests/test_seo.py`, `test_jsonld.py`) + real-browser rendering in `tests/e2e` |
+| **Template tags** | ☑ covered | `{% hook %}`/`post_content` in `plugins/tests/test_hooks.py`; `{% menu_items %}` in `menus/tests/test_public.py`, `test_models.py`; `seo_head`/`seo_jsonld` via rendered-page assertions in `seo/tests/test_seo.py`, `test_jsonld.py`; `aria_field` (incl. the new `data-testid` path) in `dashboard/tests/test_a11y.py` + the e2e form journeys |
+| **Management commands** | ☑ covered | `publish_scheduled` via `content/tests/test_scheduled.py` (`call_command`); `create_api_token` via `api/tests/test_write_api.py` (`call_command`) |
+| **Factories** | ☑ covered (new) | `tests/factories.py` (`UserFactory`, `PostFactory`) + `tests/test_factories.py` smoke tests; consumed by the `content` no-N+1 guard. (Previously zero — `factory_boy` was a declared but unused dev dependency; now wired and exercised.) |
+
+**No-N+1 regression guard (prompt §test, optional item — now done):**
+`content/tests/test_views.py::test_post_list_has_no_n_plus_one` warms the cached singletons,
+then asserts the public blog index issues the **same** number of queries for 2 vs 6 posts —
+locking in the parler-translation + author prefetch so a future change can't reintroduce an
+N+1 on the hottest public list view.
+
+---
+
+## 9. Per-event sync/async classification (architecture rule 2 — observer effects)
+
+Both real side effects in the system are notification emails, emitted by a **service** as a
+Django `Signal` and performed by a **receiver/observer** in `apps/<app>/signals.py`. Neither
+runs inline in its service, and neither is part of the triggering DB transaction.
+
+| Event (signal) | Emitter (service) | Observer (receiver) | Classification | Atomicity | Failure isolation |
+|---|---|---|---|---|---|
+| `comment_created` | `comments.services.submit_comment` (after the comment is persisted) | `comments/signals.py::notify_post_author` → `send_mail` to the post author | **Async / fire-and-forget** (best-effort notification) | **Non-atomic** — the comment is already saved; the email is decoupled and never gates submission | Emitted via `send_robust` (a dead observer can't break the request) **and** `send_mail(..., fail_silently=True)` |
+| `contact_received` | `core.services.submit_contact` | `core/signals.py::email_contact_message` → `EmailMessage.send` to `settings.CONTACT_EMAIL` (no-op if unset) | **Async / fire-and-forget** (best-effort delivery) | **Non-atomic** — there is no contact model; the email is the entire effect and is decoupled from request success | `EmailMessage.send(fail_silently=True)` |
+
+**Notes.**
+- "Async" here means **fire-and-forget / failure-isolated / decoupled-via-observer**, not
+  out-of-process. There is **no message broker** today, so the receiver currently executes
+  **synchronously within the request thread** — but it is explicitly best-effort and swallows
+  all failures, so it never blocks or breaks the user-facing action.
+- **None of the effects are atomic** with the originating write (and none should be — a mail
+  outage must not roll back a comment or a contact submission).
+- **Upgrade path (drop-in):** because each effect is already an isolated observer behind a
+  signal, moving it onto a real out-of-band worker (Celery/RQ, or `transaction.on_commit` +
+  a task queue) is a change to the receiver alone — no service, view, or model is touched.
+- Effects that are deliberately **kept inline** (not observers) are entity invariants, not
+  cross-cutting side effects: nh3 sanitize + slug/publish stamping in `Model.save()`, and the
+  revision snapshot signal — all co-located with the write because they are part of *being a
+  valid record*, not notifications (see §1.3, "Signal extraction … rejected").

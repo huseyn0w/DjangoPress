@@ -14,8 +14,13 @@ register = template.Library()
 
 
 @register.filter
-def aria_field(field):
-    """Render ``field``'s widget with aria-invalid / aria-describedby wired up."""
+def aria_field(field, testid: str = ""):
+    """Render ``field``'s widget with aria-invalid / aria-describedby wired up.
+
+    An optional ``testid`` adds a stable ``data-testid`` to the widget so the
+    Playwright end-to-end suite can target form controls without depending on
+    label text or CSS classes (which churn with styling).
+    """
     attrs: dict[str, str] = {}
     described_by: list[str] = []
     if field.errors:
@@ -25,4 +30,6 @@ def aria_field(field):
         described_by.append(f"{field.auto_id}_help")
     if described_by:
         attrs["aria-describedby"] = " ".join(described_by)
+    if testid:
+        attrs["data-testid"] = testid
     return field.as_widget(attrs=attrs)
