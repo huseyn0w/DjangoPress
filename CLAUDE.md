@@ -219,6 +219,18 @@ active_theme`, changed under Dashboard → Appearance (`manage_settings`). The
     `INSTALLED_APPS`; the public site key is rendered client-side, the private key stays
     server-side. Empty defaults are NOT the library's built-in test keys, so `manage.py
 check` stays clean (0 silenced) — no `SILENCED_SYSTEM_CHECKS` needed.
+  - `apps.menus` — managed navigation (F9). `Menu` (referenced by `slug`) +
+    `MenuItem` (links a Post/Page/Category or a custom URL; `get_url()`/`get_label()`
+    resolve the target, with `label` falling back to the linked object's translated
+    title so content links localise automatically). `menus.services.get_menu_items
+(slug)` → render-ready `[{label,url}]`; the `{% menu_items "slug" as items %}` tag
+    (`menus/templatetags/menu_tags.py`) exposes it. The shared `_site_header.html`
+    (`primary`) and `_site_footer.html` (`footer`) render a managed menu when one
+    exists and fall back to built-in links otherwise. The admin builder lives in the
+    dashboard (manage_settings-gated): create/delete menus, add/edit/delete items,
+    and keyboard-accessible up/down reordering (POST that swaps `position` — no
+    drag-JS). NOTE (deliberate scope): menus are **flat** and `label` is **not**
+    per-locale (the title fallback covers content links) — see REFACTOR_PLAN §7.
   - `apps.search` — public site search over published Posts and Pages (Phase 9.2).
     `services.search_content(query, language_code)` is the single entry point: it
     searches the translated title/body (+ Post excerpt) of the **active language's**

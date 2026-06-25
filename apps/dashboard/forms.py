@@ -9,6 +9,7 @@ from parler.forms import TranslatableModelForm
 
 from apps.content.models import Category, Page, Post, Service, Tag
 from apps.core.models import SiteSettings
+from apps.menus.models import LinkType, Menu, MenuItem
 from apps.seo.models import SeoSettings
 
 User = get_user_model()
@@ -138,6 +139,40 @@ class ServiceForm(TranslatableModelForm):
         self.fields["slug"].required = False
         self.fields["description"].required = False
         _accept_datetime_local(self.fields["scheduled_at"])
+
+
+class MenuForm(forms.ModelForm):
+    class Meta:
+        model = Menu
+        fields = ["name", "slug"]
+        help_texts = {
+            "slug": "Used in templates, e.g. “primary” (header) or “footer”.",
+        }
+
+
+class MenuItemForm(forms.ModelForm):
+    class Meta:
+        model = MenuItem
+        fields = ["label", "link_type", "url", "post", "page", "category"]
+        help_texts = {
+            "label": "Leave blank to use the linked item's title.",
+            "url": "Used only for the “Custom URL” link type.",
+        }
+
+    # Which field each link type requires.
+    _REQUIRED_FOR = {
+        LinkType.CUSTOM: "url",
+        LinkType.POST: "post",
+        LinkType.PAGE: "page",
+        LinkType.CATEGORY: "category",
+    }
+
+    def clean(self):
+        cleaned = super().clean()
+        required = self._REQUIRED_FOR.get(cleaned.get("link_type"))
+        if required and not cleaned.get(required):
+            self.add_error(required, "Required for this link type.")
+        return cleaned
 
 
 class CategoryForm(TranslatableModelForm):

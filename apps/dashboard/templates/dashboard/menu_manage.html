@@ -1,0 +1,47 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+  <div>
+    <h2 class="text-lg font-semibold text-text">{{ menu.name }}</h2>
+    <p class="font-mono text-xs text-text-muted">{{ menu.slug }}</p>
+  </div>
+  <div class="flex items-center gap-3">
+    <a href="{% url 'dashboard:menu_list' %}" class="dp-btn dp-btn-ghost text-sm">← All menus</a>
+    <a href="{% url 'dashboard:menu_item_create' menu.pk %}"
+       class="rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition-transform hover:-translate-y-0.5">Add item</a>
+  </div>
+</div>
+
+<div class="overflow-hidden rounded-2xl border border-border bg-surface">
+  <ul class="divide-y divide-border text-sm">
+    {% for item in items %}
+      <li class="flex items-center justify-between gap-4 px-5 py-3">
+        <div class="min-w-0">
+          <a href="{% url 'dashboard:menu_item_edit' menu.pk item.pk %}" class="font-medium text-text hover:text-primary">{{ item.get_label }}</a>
+          <p class="truncate font-mono text-xs text-text-muted">{{ item.get_link_type_display }} · {{ item.get_url }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <form method="post" action="{% url 'dashboard:menu_item_move' menu.pk item.pk 'up' %}">
+            {% csrf_token %}
+            <button type="submit" class="rounded-md px-2 py-1 text-text-muted hover:bg-surface-2 hover:text-text disabled:opacity-30"
+                    aria-label="Move up" {% if forloop.first %}disabled{% endif %}>↑</button>
+          </form>
+          <form method="post" action="{% url 'dashboard:menu_item_move' menu.pk item.pk 'down' %}">
+            {% csrf_token %}
+            <button type="submit" class="rounded-md px-2 py-1 text-text-muted hover:bg-surface-2 hover:text-text disabled:opacity-30"
+                    aria-label="Move down" {% if forloop.last %}disabled{% endif %}>↓</button>
+          </form>
+          <form method="post" action="{% url 'dashboard:menu_item_delete' menu.pk item.pk %}"
+                onsubmit="return confirm('Remove this item?')">
+            {% csrf_token %}
+            <button type="submit" class="rounded-md px-2 py-1 text-xs text-error hover:underline">Delete</button>
+          </form>
+        </div>
+      </li>
+    {% empty %}
+      <li class="px-5 py-8 text-center text-text-muted">No items yet. Add the first one.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

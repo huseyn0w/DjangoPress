@@ -158,7 +158,7 @@ value/risk. Effort: S/M/L from audit.
 | F6 | **Soft-delete/trash/restore** (posts+pages) + **post likes** | ☑ DONE | M | `SoftDeleteModel` mixin (`deleted_at` + `trash()`/`restore()`/`is_trashed`) + `SoftDeleteManager` (default hides trashed; `with_trashed()`/`only_trashed()`) on Post+Page → every public/admin/search/sitemap query excludes trash automatically. Dashboard delete now trashes; trash list + restore + permanent-delete (delete-perm gated, owner-scoped via `editable_by`). `Like` model (unique post+user, toggle = create/delete) → `content:post_like` endpoint (login-required, redirect-to-login for guests) + a11y like button (`aria-pressed`) on post detail. 21 tests. |
 | F7 | **Revision restore UI** (storage exists, restore absent) | ☑ DONE | M | `RevisionRepository` (history list + lookup) + dashboard revisions page (`dashboard/revisions.html`, shared by posts+pages): per-language history sidebar + line-level diff (`difflib`, revision vs current) + restore. Restore is a model transition (`Post/Page.restore_revision`) so the service stays ORM-free; saving re-snapshots so history is preserved. Owner-scoped (posts via `editable_by`), gated on `change_post`/`change_page`. "Revision history" link in both editors. 7 tests. |
 | F8 | **Scheduled publishing** (`scheduled_at` + worker) | ☑ DONE | M | `SchedulableMixin` (`scheduled_at` + `is_scheduled` + `publish_scheduled()` transition) on Post/Page/Service; `PublishableQuerySet.due_for_publish()` (draft + due, trashed excluded via default mgr). `content.services.publish_scheduled_content()` flips each due item via its transition (no ORM in service) → `manage.py publish_scheduled` cron command. Dashboard: datetime-local `scheduled_at` field on post/page/service forms (post gated on `can_publish` like status); "Scheduled · <time>" badge in the post list. 9 tests. |
-| F9 | **Menu builder** + public menu rendering | absent | M | copy laravel; sortable list (keyboard-accessible). |
+| F9 | **Menu builder** + public menu rendering | ☑ DONE | M | New `apps.menus` (`Menu` slug + `MenuItem` linking post/page/category/custom URL; `get_url()`/`get_label()` with localised title fallback). Dashboard builder (manage_settings-gated): create/delete menus, add/edit/delete items, keyboard-accessible up/down reorder (POST swap, no drag-JS). `{% menu_items "slug" as items %}` tag + `menus.services.get_menu_items` resolve to render-ready dicts; the shared header (`primary`) + footer (`footer`) render managed menus when present, else fall back to built-in links. 14 tests. **Scope note: flat menus + non-translatable label (see §7).** |
 | F10 | **Author public pages** + **self-service profile edit** | absent (fields exist) | M | `/authors/<id>`, `/account`; ProfilePage JSON-LD; avatar upload. |
 | F11 | **Media picker in editor** + **swappable storage driver** | absent | M | picker modal into editor; storage via Django `STORAGES` (Strategy). |
 | F12 | **Public REST API** + **MCP server** | absent | L | DRF read API + gated write; MCP port ts tool list, OAuth-floor (laravel model). Largest item. |
@@ -225,5 +225,12 @@ Each phase: TDD, subagent-driven where parallelizable, adversarial verification 
 ---
 
 ## 7. Matrix-gap flags for the user
-None so far — the matrix's "cmstack-django needs" list matched the code exactly. Record any
-discovered discrepancy here (do not edit `../FEATURE_MATRIX.md`).
+- **F9 menus — deliberate scope reduction (not a matrix error).** The matrix's menu row says
+  "items reference posts/pages/categories/custom URLs; **per-locale**" and implies a
+  drag-sortable nested builder. Shipped: **flat** menus (header/footer — the explicitly listed
+  "public menu rendering" requirement), **keyboard-accessible up/down reordering** (more robust
+  and a11y-friendly than drag-drop, works without JS), and a **non-translatable `label`** that
+  **falls back to the linked object's translated title** — so post/page/category items localise
+  automatically (the common case) while custom-URL labels are shared across locales. Full
+  per-locale custom labels (parler on `MenuItem`) and nested/dropdown menus are deferred
+  follow-ups; flag raised so the user can prioritise them if needed. No other discrepancies.

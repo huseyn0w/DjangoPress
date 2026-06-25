@@ -3,7 +3,12 @@
   content shell (public_base.html) and the landing page (core/home.html) so the
   navigation can never drift. Sticky 64px; gains a border + shadow + blur on
   scroll. Mobile: a focus-trapped drawer (x-trap), Esc closes.
+
+  Primary links come from the managed "primary" menu when it exists; otherwise the
+  built-in Services/Blog links show so a fresh install still has navigation.
 {% endcomment %}
+{% load menu_tags %}
+{% menu_items "primary" as primary_items %}
 <header
   x-data="{ scrolled: false, open: false }"
   @scroll.window="scrolled = window.scrollY > 8"
@@ -15,8 +20,14 @@
 
     {# Desktop nav #}
     <nav class="hidden items-center gap-6 text-sm sm:flex" aria-label="Primary">
-      <a class="font-medium text-text-muted transition-colors hover:text-text" href="{% url 'content:service_list' %}">Services</a>
-      <a class="font-medium text-text-muted transition-colors hover:text-text" href="{% url 'content:post_list' %}">Blog</a>
+      {% if primary_items %}
+        {% for item in primary_items %}
+          <a class="font-medium text-text-muted transition-colors hover:text-text" href="{{ item.url }}">{{ item.label }}</a>
+        {% endfor %}
+      {% else %}
+        <a class="font-medium text-text-muted transition-colors hover:text-text" href="{% url 'content:service_list' %}">Services</a>
+        <a class="font-medium text-text-muted transition-colors hover:text-text" href="{% url 'content:post_list' %}">Blog</a>
+      {% endif %}
       <form method="get" action="{% url 'search:results' %}" role="search">
         <label for="header-search" class="sr-only">Search</label>
         <input
@@ -94,8 +105,14 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
-      <a class="rounded-md px-3 py-2 font-medium text-text transition-colors hover:bg-surface-2" href="{% url 'content:service_list' %}">Services</a>
-      <a class="rounded-md px-3 py-2 font-medium text-text transition-colors hover:bg-surface-2" href="{% url 'content:post_list' %}">Blog</a>
+      {% if primary_items %}
+        {% for item in primary_items %}
+          <a class="rounded-md px-3 py-2 font-medium text-text transition-colors hover:bg-surface-2" href="{{ item.url }}">{{ item.label }}</a>
+        {% endfor %}
+      {% else %}
+        <a class="rounded-md px-3 py-2 font-medium text-text transition-colors hover:bg-surface-2" href="{% url 'content:service_list' %}">Services</a>
+        <a class="rounded-md px-3 py-2 font-medium text-text transition-colors hover:bg-surface-2" href="{% url 'content:post_list' %}">Blog</a>
+      {% endif %}
       <form method="get" action="{% url 'search:results' %}" role="search" class="px-1 py-2">
         <label for="mobile-search" class="sr-only">Search</label>
         <input id="mobile-search" type="search" name="q" placeholder="Search…" class="w-full rounded-sm border border-border-strong bg-surface px-3 py-2 text-sm text-text placeholder:text-text-subtle focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40" />

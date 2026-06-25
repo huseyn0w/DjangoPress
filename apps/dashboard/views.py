@@ -17,10 +17,13 @@ from django.views.generic import (
 from parler.views import TranslatableModelFormMixin
 
 from apps.content.models import Category, Page, Post, Service, Tag
+from apps.menus.models import Menu, MenuItem
 
 from . import services
 from .forms import (
     CategoryForm,
+    MenuForm,
+    MenuItemForm,
     PageForm,
     PostForm,
     SeoSettingsForm,
@@ -643,3 +646,118 @@ class CommentModerateView(AdminAccessMixin, View):
             raise Http404 from exc
         messages.success(request, message)
         return redirect("dashboard:comment_list")
+
+
+# --------------------------------------------------------------------------- #
+# Menus (builder)
+# --------------------------------------------------------------------------- #
+class MenuListView(AdminAccessMixin, SectionMixin, ListView):
+    permission_required = ("accounts.access_admin", "accounts.manage_settings")
+    template_name = "dashboard/menu_list.html"
+    context_object_name = "menus"
+    section = "menus"
+    heading = "Menus"
+
+    def get_queryset(self):
+        return services.list_menus()
+
+
+class MenuCreateView(AdminAccessMixin, SectionMixin, CreateView):
+    permission_required = ("accounts.access_admin", "accounts.manage_settings")
+    model = Menu
+    form_class = MenuForm
+    template_name = "dashboard/menu_form.html"
+    section = "menus"
+    heading = "New menu"
+
+    def get_success_url(self):
+        messages.success(self.request, "Menu created.")
+        return reverse_lazy("dashboard:menu_manage", args=[self.object.pk])
+
+
+class MenuDeleteView(AdminAccessMixin, View):
+    permission_required = ("accounts.access_admin", "accounts.manage_settings")
+    http_method_names = ["post"]
+
+    def post(self, request, pk: int):
+        services.delete_menu(pk)
+        messages.success(request, "Menu deleted.")
+        return redirect("dashboard:menu_list")
+
+
+class MenuManageView(AdminAccessMixin, SectionMixin, TemplateView):
+    permission_required = ("accounts.access_admin", "accounts.manage_settings")
+    template_name = "dashboard/menu_manage.html"
+    section = "menus"
+    heading = "Edit menu"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        menu = services.get_menu(self.kwargs["pk"])
+        ctx["menu"] = menu
+        ctx["items"] = services.menu_items(menu)
+        return ctx
+
+
+class MenuItemCreateView(AdminAccessMixin, SectionMixin, CreateView):
+    permission_required = ("accounts.access_admin", "accounts.manage_settings")
+    model = MenuItem
+    form_class = MenuItemForm
+    template_name = "dashboard/menu_item_form.html"
+    section = "menus"
+    heading = "Add menu item"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["menu"] = services.get_menu(self.kwargs["pk"])
+        return ctx
+
+    def form_valid(self, form):
+        services.prepare_new_menu_item(form.instance, services.get_menu(self.kwargs["pk"]))
+        messages.success(self.request, "Item added.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy("dashboard:menu_manage", args=[self.kwargs["pk"]])
+
+
+class MenuItemUpdateView(AdminAccessMixin, SectionMixin, UpdateView):
+    permission_required = ("accounts.access_admin", "accounts.manage_settings")
+    form_class = MenuItemForm
+    template_name = "dashboard/menu_item_form.html"
+    section = "menus"
+    heading = "Edit menu item"
+
+    def get_object(self, queryset=None):
+        return services.get_menu_item(services.get_menu(self.kwargs["pk"]), self.kwargs["item_pk"])
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["menu"] = services.get_menu(self.kwargs["pk"])
+        return ctx
+
+    def form_valid(self, form):
+        messages.success(self.request, "Item updated.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy("dashboard:menu_manage", args=[self.kwargs["pk"]])
+
+
+class MenuItemDeleteView(AdminAccessMixin, View):
+    permission_required = ("accounts.access_admin", "accounts.manage_settings")
+    http_method_names = ["post"]
+
+    def post(self, request, pk: int, item_pk: int):
+        services.delete_menu_item(services.get_menu(pk), item_pk)
+        messages.success(request, "Item removed.")
+        return redirect("dashboard:menu_manage", pk=pk)
+
+
+class MenuItemMoveView(AdminAccessMixin, View):
+    permission_required = ("accounts.access_admin", "accounts.manage_settings")
+    http_method_names = ["post"]
+
+    def post(self, request, pk: int, item_pk: int, direction: str):
+        services.move_menu_item(services.get_menu(pk), item_pk, direction)
+        return redirect("dashboard:menu_manage", pk=pk)

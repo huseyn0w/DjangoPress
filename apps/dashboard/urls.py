@@ -68,6 +68,27 @@ urlpatterns = [
     # Plugins
     path("plugins/", views.PluginListView.as_view(), name="plugins"),
     path("plugins/<slug:slug>/toggle/", views.PluginToggleView.as_view(), name="plugin_toggle"),
+    # Menus (builder)
+    path("menus/", views.MenuListView.as_view(), name="menu_list"),
+    path("menus/new/", views.MenuCreateView.as_view(), name="menu_create"),
+    path("menus/<int:pk>/", views.MenuManageView.as_view(), name="menu_manage"),
+    path("menus/<int:pk>/delete/", views.MenuDeleteView.as_view(), name="menu_delete"),
+    path("menus/<int:pk>/items/new/", views.MenuItemCreateView.as_view(), name="menu_item_create"),
+    path(
+        "menus/<int:pk>/items/<int:item_pk>/edit/",
+        views.MenuItemUpdateView.as_view(),
+        name="menu_item_edit",
+    ),
+    path(
+        "menus/<int:pk>/items/<int:item_pk>/delete/",
+        views.MenuItemDeleteView.as_view(),
+        name="menu_item_delete",
+    ),
+    path(
+        "menus/<int:pk>/items/<int:item_pk>/move/<str:direction>/",
+        views.MenuItemMoveView.as_view(),
+        name="menu_item_move",
+    ),
     # Comments (moderation)
     path("comments/", views.CommentListView.as_view(), name="comment_list"),
     path(

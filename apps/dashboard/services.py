@@ -25,6 +25,7 @@ from apps.content.repositories import (
 )
 from apps.core.repositories import SiteSettingsRepository
 from apps.media.repositories import MediaRepository
+from apps.menus.repositories import MenuItemRepository, MenuRepository
 from apps.plugins import registry as plugins
 from apps.seo.repositories import SeoSettingsRepository
 from apps.themes import registry as themes
@@ -210,6 +211,49 @@ def list_categories():
 
 def list_tags():
     return TagRepository.with_post_counts()
+
+
+# --------------------------------------------------------------------------- #
+# Menus
+# --------------------------------------------------------------------------- #
+def list_menus():
+    return MenuRepository.all()
+
+
+def get_menu(pk: int):
+    return MenuRepository.get(pk)
+
+
+def menu_items(menu):
+    return MenuRepository.items_for(menu)
+
+
+def delete_menu(pk: int) -> None:
+    MenuRepository.delete(MenuRepository.get(pk))
+
+
+def prepare_new_menu_item(item, menu) -> None:
+    """Attach a new item to its menu and append it after the current last."""
+    item.menu = menu
+    item.position = MenuItemRepository.next_position(menu)
+
+
+def get_menu_item(menu, item_pk: int):
+    return MenuItemRepository.get(menu, item_pk)
+
+
+def delete_menu_item(menu, item_pk: int) -> None:
+    MenuItemRepository.delete(MenuItemRepository.get(menu, item_pk))
+
+
+def move_menu_item(menu, item_pk: int, direction: str) -> None:
+    """Swap an item with its neighbour (``up``/``down``); a no-op at the ends."""
+    MenuItemRepository.get(menu, item_pk)  # 404 if not in this menu
+    items = MenuItemRepository.ordered(menu)
+    index = next(i for i, item in enumerate(items) if item.pk == item_pk)
+    target = index - 1 if direction == "up" else index + 1
+    if 0 <= target < len(items):
+        MenuItemRepository.swap_positions(items[index], items[target])
 
 
 # --------------------------------------------------------------------------- #
