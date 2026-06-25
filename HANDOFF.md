@@ -4,7 +4,7 @@ _Last refresh: 2026-06-24. Read with [`REFACTOR_PLAN.md`](REFACTOR_PLAN.md),
 [`../FEATURE_MATRIX.md`](../FEATURE_MATRIX.md), [`../DESIGN_SYSTEM.md`](../DESIGN_SYSTEM.md)._
 
 ## Current state (verified, not asserted)
-- Full test suite: **349 passed** (`.venv/bin/python -m pytest -q`). Was 218 at start.
+- Full test suite: **361 passed** (`.venv/bin/python -m pytest -q`). Was 218 at start.
 - NOTE: `djangorestframework==3.15.2` added (requirements/base.txt) — run
   `.venv/bin/python -m pip install -r requirements/dev.txt` if a fresh checkout lacks it.
 - Lint: `.venv/bin/ruff check apps config` → clean.

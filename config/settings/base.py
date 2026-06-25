@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     "django_recaptcha",
     "rest_framework",
+    "rest_framework.authtoken",
     # Local apps
     "apps.accounts",
     "apps.content",
@@ -279,9 +280,14 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
-    # Read access is public; write/MCP endpoints declare their own auth+permissions.
+    # Token for programmatic clients; session so the dashboard can reuse the API.
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    # Read access is public; write endpoints require the matching model permission.
+    # (Keep the default AnonymousUser so DjangoModelPermissions allows anon reads.)
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
-    "UNAUTHENTICATED_USER": None,
 }
 
 # --------------------------------------------------------------------------- #

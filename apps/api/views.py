@@ -10,7 +10,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.http import JsonResponse
 from django.utils import translation
-from rest_framework import viewsets
+from rest_framework import permissions, viewsets
 
 from . import serializers, services
 
@@ -29,13 +29,28 @@ class LanguageScopedMixin:
             translation.activate(lang)
 
 
-class PostViewSet(LanguageScopedMixin, viewsets.ReadOnlyModelViewSet):
+class PostViewSet(LanguageScopedMixin, viewsets.ModelViewSet):
+    """Posts: public read, gated write.
+
+    Reads (list/retrieve) are public and scoped to published posts. Writes require
+    the matching model permission (DjangoModelPermissions: add/change/delete_post)
+    and are owner-scoped for non-managers; publish state is gated server-side in the
+    service (``gate_publish_state``), so the API can't be used to bypass it.
+    """
+
     lookup_field = "slug"
+    permission_classes = [permissions.DjangoModelPermissionsOrAnonReadOnly]
 
     def get_queryset(self):
-        return services.published_posts()
+        # Reads (and the permission check's model probe for anon writers) use the
+        # published set; authenticated writers get their owner-scoped set.
+        if self.request.method in permissions.SAFE_METHODS or not self.request.user.is_authenticated:
+            return services.published_posts()
+        return services.editable_posts(self.request.user)
 
     def get_serializer_class(self):
+        if self.action in ("create", "update", "partial_update"):
+            return serializers.PostWriteSerializer
         if self.action == "retrieve":
             return serializers.PostDetailSerializer
         return serializers.PostSerializer

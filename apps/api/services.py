@@ -8,6 +8,7 @@ from __future__ import annotations
 from django.db import connection
 from django.db.models import QuerySet
 
+from apps.accounts.repositories import UserRepository
 from apps.content.repositories import (
     CategoryRepository,
     PageRepository,
@@ -16,9 +17,24 @@ from apps.content.repositories import (
     TagRepository,
 )
 
+from .repositories import TokenRepository
+
 
 def published_posts() -> QuerySet:
     return PostRepository.published()
+
+
+def editable_posts(user) -> QuerySet:
+    """Owner-scoped post queryset for API write lookups (update/delete)."""
+    return PostRepository.for_dashboard(user)
+
+
+def issue_token(username: str) -> str | None:
+    """Mint (or fetch) an API token for ``username``; None if no such user."""
+    user = UserRepository.get_by_username(username)
+    if user is None:
+        return None
+    return TokenRepository.get_or_create_for(user)
 
 
 def published_pages() -> QuerySet:

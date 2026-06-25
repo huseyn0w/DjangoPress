@@ -104,6 +104,17 @@ class PostRepository:
     def due_for_publish() -> QuerySet:
         return Post.objects.due_for_publish()
 
+    # -- Write (API) -- #
+    @staticmethod
+    def new(author) -> Post:
+        """An unsaved post owned by ``author`` (translated fields set by caller)."""
+        return Post(author=author)
+
+    @staticmethod
+    def save(post: Post) -> Post:
+        post.save()
+        return post
+
     @staticmethod
     def published_indexable(limit: int) -> QuerySet:
         """Published, non-noindex posts for crawler surfaces (llms.txt), capped."""

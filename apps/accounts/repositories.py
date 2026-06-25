@@ -23,5 +23,10 @@ class UserRepository:
         return get_object_or_404(User, pk=pk)
 
     @staticmethod
+    def get_by_username(username: str):
+        """The user with ``username`` or None (used by the token-issuing command)."""
+        return User.objects.filter(username=username).first()
+
+    @staticmethod
     def count_all() -> int:
         return User.objects.count()

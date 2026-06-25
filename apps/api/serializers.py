@@ -10,6 +10,9 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from apps.content import services as content_services
+from apps.content.models import Status
+
 
 class _TaxonomySerializer(serializers.Serializer):
     slug = serializers.CharField()
@@ -48,6 +51,30 @@ class PostSerializer(serializers.Serializer):
 
 class PostDetailSerializer(PostSerializer):
     body = serializers.CharField()
+
+
+class PostWriteSerializer(serializers.Serializer):
+    """Create/update payload for the gated post API.
+
+    Persistence + publish-gating go through ``content.services`` (which uses the
+    repository), so no ORM lives in the serializer; translated fields land in the
+    request's active language.
+    """
+
+    id = serializers.IntegerField(read_only=True)
+    slug = serializers.SlugField(max_length=200, required=False, allow_blank=True)
+    title = serializers.CharField(max_length=200)
+    excerpt = serializers.CharField(required=False, allow_blank=True)
+    body = serializers.CharField(required=False, allow_blank=True)
+    status = serializers.ChoiceField(
+        choices=Status.choices, required=False, default=Status.DRAFT
+    )
+
+    def create(self, validated_data):
+        return content_services.api_create_post(validated_data, self.context["request"].user)
+
+    def update(self, instance, validated_data):
+        return content_services.api_update_post(instance, validated_data, self.context["request"].user)
 
 
 class PageSerializer(serializers.Serializer):

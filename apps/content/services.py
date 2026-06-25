@@ -111,6 +111,33 @@ def get_post_for_action(slug: str) -> Post:
     return PostRepository.get_by_slug(slug)
 
 
+_WRITABLE_POST_FIELDS = ("title", "excerpt", "body", "status")
+
+
+def _apply_post_data(post: Post, data: dict) -> None:
+    """Copy validated API data onto a post (translated fields in the active language)."""
+    for field in _WRITABLE_POST_FIELDS:
+        if field in data:
+            setattr(post, field, data[field])
+    if data.get("slug"):
+        post.slug = data["slug"]
+
+
+def api_create_post(data: dict, user) -> Post:
+    """Create a post from API data, owned by ``user`` and publish-gated."""
+    post = PostRepository.new(author=user)
+    _apply_post_data(post, data)
+    post.gate_publish_state(user)  # non-publishers are forced to draft
+    return PostRepository.save(post)
+
+
+def api_update_post(post: Post, data: dict, user) -> Post:
+    """Update a post from API data, preserving publish state for non-publishers."""
+    _apply_post_data(post, data)
+    post.gate_publish_state(user)
+    return PostRepository.save(post)
+
+
 def publish_scheduled_content() -> dict[str, int]:
     """Publish every draft whose scheduled time has arrived; return per-type counts.
 
