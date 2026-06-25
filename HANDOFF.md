@@ -1,16 +1,17 @@
 # cmstack-django — HANDOFF
 
 _Last refresh: 2026-06-26 (original REFACTOR_PLAN scope — F1–F15, UI U1–U7, README,
-adversarial + completeness-critic — is COMPLETE. The user then updated the master prompt
-(`../prompts/cmstack-django.md`); a few of its STRICTER acceptance criteria are not yet
-met — see "REMAINING vs the updated prompt". Resume there.). Read with
-[`REFACTOR_PLAN.md`](REFACTOR_PLAN.md), [`../FEATURE_MATRIX.md`](../FEATURE_MATRIX.md),
-[`../DESIGN_SYSTEM.md`](../DESIGN_SYSTEM.md)._
+adversarial + completeness-critic — is COMPLETE, **and** the stricter Task-4 (E2E) criteria
+the user added in the updated master prompt (`../prompts/cmstack-django.md`) are now ALSO
+COMPLETE — see "DONE this session". No open required items remain; optional follow-ups are
+listed at the bottom.). Read with [`REFACTOR_PLAN.md`](REFACTOR_PLAN.md),
+[`../FEATURE_MATRIX.md`](../FEATURE_MATRIX.md), [`../DESIGN_SYSTEM.md`](../DESIGN_SYSTEM.md)._
 
 ## Current state (verified, not asserted — 2026-06-26)
-- Branch `refactor/service-repository-layer`: **37 commits**, LOCAL only (NOT pushed, NOT on `main`).
-- Full unit/integration suite: **388 passed, 8 deselected** (`.venv/bin/python -m pytest -q`).
-- E2E: **8 passed** — `.venv/bin/python -m pytest tests/e2e -m e2e --ds=config.settings.test_e2e`
+- Branch `refactor/service-repository-layer`: **59 commits**, LOCAL only (NOT pushed, NOT on `main`).
+  Latest: `5b3831d` (data-testid + create→publish & media-upload e2e + per-layer/sync-async docs).
+- Full unit/integration suite: **392 passed, 10 deselected** (`.venv/bin/python -m pytest -q`).
+- E2E: **10 passed** — `.venv/bin/python -m pytest tests/e2e -m e2e --ds=config.settings.test_e2e`
   (needs `playwright install chromium` + `cd frontend && npm run build` first).
 - Lint/types clean: `.venv/bin/ruff check apps config` · `.venv/bin/python -m black --check apps
   config tests plugins` · `.venv/bin/python -m mypy apps config` → **Success, 0 issues**.
@@ -25,24 +26,43 @@ met — see "REMAINING vs the updated prompt". Resume there.). Read with
 - Run app: `docker compose up` (or venv + `manage.py runserver`). Use `.venv/bin/python`
   directly — `source .venv/bin/activate` does NOT expose django in this shell.
 
-## REMAINING vs the updated prompt (`../prompts/cmstack-django.md`) — RESUME HERE
-The updated prompt strengthened Task 4 (E2E) beyond what was built. Open items, ordered:
-1. **E2E selectors must be `data-testid`** (prompt §4 + self-check). Today the journeys use
-   `get_by_role`/`get_by_text`; there are ZERO `data-testid` in templates. Add stable
-   `data-testid` attributes to the touched surfaces and switch the E2E selectors to them.
-2. **E2E canonical-flow gaps** (prompt §4: "login/auth, content create → publish, media upload,
-   search, main dashboard actions"). Covered today: home, reader, search, SEO, login-gate,
-   lang-switch, dark-toggle, confirm-dialog-trash. MISSING: **content create → publish** (a
-   dashboard authoring flow) and **media upload**. Add both (admin user has the perms).
-3. **REFACTOR_PLAN docs the prompt now requires:** (a) a **per-layer test-status list**
-   (models/managers, views, forms/serializers, permissions, repositories, services,
-   signals/receivers, templates, template tags, management commands, factories — none at zero);
-   (b) a **per-event sync-vs-async classification** for the signal/observer effects
-   (`comment_created` email, `contact_*` email — both async/fire-and-forget; none are atomic).
-4. (Optional, prompt §test) consider `assertNumQueries` guards on the hottest list views to lock
-   in "no N+1" as an explicit regression, if not already implicit.
+## DONE this session — the updated-prompt Task-4 gaps (all closed; commit `5b3831d`)
+All four items from the previous "REMAINING vs the updated prompt" are complete, TDD'd, and
+independently completeness-critic-verified (verdict: all 4 criteria genuinely met, no
+CRITICAL/MAJOR; only 2 harmless NITs — see end):
+1. **E2E selectors are now `data-testid`.** Stable `data-testid` hooks added to the touched
+   surfaces (home recent-post link, post-detail title/body, search result, dashboard post
+   row/title/trash, post-form title/excerpt/status/Trix-editor/save, dark toggle, confirm
+   dialog accept/cancel, media file/title/submit/asset) and the Playwright journeys switched
+   to them. Form-field testids thread through `_field.html` via an OPTIONAL `testid` arg on the
+   `aria_field` filter (`apps/dashboard/templatetags/dashboard_a11y.py`); media file/title via
+   widget attrs in `apps/media/forms.py`. A11y landmark/heading/hreflang/JSON-LD assertions are
+   DELIBERATELY kept role/attribute-based (converting them would defeat what they verify) —
+   documented in the test-module docstring.
+2. **Both missing canonical flows added** (`tests/e2e/test_journeys.py`): `test_author_creates_
+   and_publishes_a_post` (real Trix authoring → publish → asserts public visibility of the
+   round-tripped body) and `test_admin_uploads_media` (in-memory PNG → library). 8 → **10 e2e**.
+   Shared `login()` helper + `png_upload` fixture added to `tests/e2e/conftest.py`.
+   GOTCHA: media upload/library live at `/library/upload/` + `/library/` (NOT `/media/…`).
+3. **REFACTOR_PLAN.md §8 + §9 added:** §8 per-layer test-status table (11 layers, none at zero,
+   with representative test files); §9 per-event sync/async classification (`comment_created`
+   and `contact_received` emails — both fire-and-forget via signal→observer, non-atomic,
+   failure-isolated by `send_robust`/`fail_silently`, no broker; drop-in upgrade path to a real
+   worker noted).
+4. **(Optional) no-N+1 guard done:** `apps/content/tests/test_views.py::test_post_list_has_no_n_
+   plus_one` warms the cached singletons then asserts the blog index issues the SAME query count
+   for 2 vs 6 posts (locks in parler-translation + author prefetch).
+- **Also wired the previously dead `factory_boy` dep:** `tests/factories.py`
+  (`UserFactory`/`PostFactory`) + `tests/test_factories.py` smoke tests; consumed by the N+1
+  guard. The "factories" layer was the only one genuinely at zero before.
 
-Everything else in the prompt's self-check is satisfied (see the DONE sections below).
+### Open items remaining: NONE required. Optional follow-ups (critic NITs / prior scope flags):
+- (NIT) 3 testids exist but are unused container/symmetry hooks (`recent-posts`, `post-row`,
+  `confirm-cancel`) — harmless; remove only if you want strict minimalism.
+- (NIT) blog-list prefetch relies on parler's per-request translation cache for the flat query
+  count; add an explicit `translations` prefetch only if that caching is ever disabled.
+- Prior deliberate scope flags still stand (REFACTOR_PLAN §7): F9 flat/non-per-locale menus;
+  F12 MCP token-auth floor (not OAuth 2.1 / SSE). Raise with the user only if they want them.
 
 ## Last session's deliverables (F13/F14/F15 + U5/U6/U7 + README + critic)
 - **F13 CI**, **F15 mypy** (0 errors, django-stubs plugin + file-level `disable-error-code` on
@@ -124,15 +144,15 @@ Layering enforced everywhere: `view → service → repository → manager/Query
 >
 > **First, orient — before any work:**
 > 1. `cd cmstack-django`; you are already on the LOCAL branch `refactor/service-repository-layer`
->    (37 commits, NOT pushed, NOT on `main`). Commit there; push only if asked.
+>    (59 commits, NOT pushed, NOT on `main`). Commit there; push only if asked.
 > 2. Read `HANDOFF.md` and `REFACTOR_PLAN.md` in full, then `../FEATURE_MATRIX.md` and
 >    `../DESIGN_SYSTEM.md` (read-only canon — never edit the two shared specs).
-> 3. Confirm the baseline yourself: `.venv/bin/python -m pytest -q` (expect **388 passed, 8
+> 3. Confirm the baseline yourself: `.venv/bin/python -m pytest -q` (expect **392 passed, 10
 >    deselected**), `.venv/bin/ruff check apps config`, `.venv/bin/python -m mypy apps config`
 >    (Success, 0 issues), and E2E `.venv/bin/python -m pytest tests/e2e -m e2e
 >    --ds=config.settings.test_e2e` (needs `playwright install chromium` +
 >    `cd frontend && npm run build`). Use `.venv/bin/python -m black`/`-m mypy` (the bare
->    console scripts have a stale shebang). Expect **8 e2e passed**.
+>    console scripts have a stale shebang). Expect **10 e2e passed**.
 >
 > **Operating rules (unchanged):** work autonomously inside `cmstack-django/`; respond to me in
 > **Russian**, keep all code/comments/commits/docs in **English**; Superpowers framework
@@ -149,14 +169,14 @@ Layering enforced everywhere: `view → service → repository → manager/Query
 >
 > **DONE (do NOT redo):** the whole original REFACTOR_PLAN — architecture refactor (all apps,
 > adversarially verified), feature parity **F1–F15**, UI **U1–U7** (Lighthouse ≥95 measured),
-> README rewrite, and a completeness-critic pass. 388 unit + 8 e2e pass; ruff/black/mypy clean.
+> README rewrite, two completeness-critic passes — **AND** the updated prompt's stricter Task-4
+> (E2E) criteria: `data-testid` selectors, the content-create→publish + media-upload journeys,
+> the REFACTOR_PLAN §8 per-layer test-status table + §9 sync/async classification, a no-N+1
+> guard, and `factory_boy` wired (see "DONE this session" above). 392 unit + 10 e2e pass;
+> ruff/black/mypy clean.
 >
-> **RESUME HERE — close the gaps the UPDATED prompt added (see HANDOFF "REMAINING vs the
-> updated prompt"), TDD + show real output:**
-> 1. Add stable **`data-testid`** attributes to the relevant templates and switch the Playwright
->    selectors to them (the prompt requires `data-testid`, not role/text).
-> 2. Add the missing **canonical E2E flows: content create → publish** (dashboard authoring) and
->    **media upload** — keep parity with the sibling stacks' flow list.
-> 3. Record in `REFACTOR_PLAN.md`: the **per-layer test-status list** and the **per-event
->    sync/async classification** for the signal effects (both current effects are async email).
-> 4. Then re-run the completeness-critic and refresh `HANDOFF.md`.
+> **No required work remains.** If asked for more, candidates (all optional, none blocking):
+> the 2 critic NITs (remove unused container testids; explicit blog-list `translations`
+> prefetch), the prior §7 scope flags (F9 per-locale/nested menus; F12 OAuth 2.1 + SSE MCP
+> transport), or pushing the branch / opening a PR (currently LOCAL-only). Confirm scope with me
+> before starting — the autonomous gap-closing brief is complete.
