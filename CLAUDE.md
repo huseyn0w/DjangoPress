@@ -39,6 +39,8 @@ code style): https://github.com/huseyn0w/Laravella-CMS
 - Dev up: `docker compose up`
 - Migrate: `docker compose exec web python manage.py migrate`
 - Publish scheduled content (cron, e.g. every minute): `python manage.py publish_scheduled`
+- Mint an API token: `python manage.py create_api_token <user>`; mint a local OAuth 2.1
+  client: `python manage.py create_oauth_app <user>` (prints the client secret once).
 - Tests: `docker compose exec web pytest` (single test: `pytest path::test_name`)
 - Lint/format/types: `ruff check .`, `black .`, and `mypy apps config` (django-stubs
   plugin is wired — see `[tool.mypy]`/`[tool.django-stubs]` in `pyproject.toml`).
@@ -247,44 +249,64 @@ active_theme`, changed under Dashboard → Appearance (`manage_settings`). The
 check` stays clean (0 silenced) — no `SILENCED_SYSTEM_CHECKS` needed.
   - `apps.menus` — managed navigation (F9). `Menu` (referenced by `slug`) +
     `MenuItem` (links a Post/Page/Category or a custom URL; `get_url()`/`get_label()`
-    resolve the target). **Nested (one level deep):** `MenuItem.parent` (self-FK)
-    nests an item under a top-level one; `menus.services.get_menu_items(slug)` →
-    render-ready **tree** `[{label,url,children}]` (children always present, possibly
-    empty; the child set is prefetched so there's no N+1). The `{% menu_items "slug"
-    as items %}` tag (`menus/templatetags/menu_tags.py`) exposes it. The shared
-    `_site_header.html` (`primary`) renders an **accessible dropdown** for items with
-    children (`.nav-group`/`.nav-submenu` raw-CSS primitive in `styles.css`: reveals
-    on hover AND `:focus-within`, works with **no JS**, `aria-haspopup` + `role=menu`);
-    the mobile drawer indents children; `_site_footer.html` (`footer`) flattens
-    children inline. Both fall back to built-in links when no managed menu exists.
-    **Per-locale labels:** `MenuItem.label` is a **parler translated field** (like
-    Post/Page/etc.); `get_label()` resolves active-language label → any translated
-    label → linked object's translated title → custom URL. The admin builder
-    (dashboard, manage_settings-gated): create/delete menus, add/edit/delete items
-    with a parent select (top-level items of this menu only; an item with children
-    can't itself be nested), a tree manage view, keyboard-accessible up/down reorder
-    scoped to the sibling group (POST that swaps `position` — no drag-JS), and the
-    item form edits labels one language at a time via `?language=` tabs
-    (`DashboardTranslatableFormMixin`). NOTE (deliberate scope): **drag-drop** reorder
-    and **>1 level** of nesting are intentionally not built — see REFACTOR_PLAN §7.
+    resolve the target). **Arbitrary-depth nesting:** `MenuItem.parent` (self-FK) to
+    ANY depth; `menus.services.get_menu_items(slug)` → render-ready recursive **tree**
+    `[{label,url,children}]` (children always present, possibly empty) assembled in
+    Python from ONE flat fetch (`MenuRepository.flat_for_tree`) + translations
+    prefetch, so there's **no N+1 at any depth**. The `{% menu_items "slug" as items %}`
+    tag (`menus/templatetags/menu_tags.py`) exposes it. The shared `_site_header.html`
+    (`primary`) renders **accessible recursive flyout dropdowns** (`_menu_node.html` +
+    the `.nav-group`/`.nav-submenu` raw-CSS primitive in `styles.css`: reveals on hover
+    AND `:focus-within`, works with **no JS**, `aria-haspopup` + `role=menu`); the
+    mobile drawer indents the tree; `_site_footer.html` (`footer`) flattens it. Both
+    fall back to built-in links when no managed menu exists. **Per-locale labels:**
+    `MenuItem.label` is a **parler translated field** (like Post/Page/etc.);
+    `get_label()` resolves active-language label → any translated label → linked
+    object's translated title → custom URL. The admin builder (dashboard,
+    manage_settings-gated): create/delete menus, add/edit/delete items with a parent
+    select scoped to the menu and **cycle-protected** (never self or a descendant —
+    enforced in the queryset via `MenuItemRepository.descendant_ids`/`eligible_parents`
+    AND re-checked in `clean()`), a depth-indented tree manage view, and reorder within
+    a sibling group two ways: **drag-and-drop** (SortableJS progressive enhancement in
+    `admin.js` → JSON `MenuItemReorderView` → `repository.reorder`) with the
+    keyboard-accessible up/down `position`-swap POST as the **no-JS fallback**. The item
+    form edits labels one language at a time via `?language=` tabs
+    (`DashboardTranslatableFormMixin`). (Full F9 scope is delivered — REFACTOR_PLAN §7.)
   - `apps.api` — public REST API (DRF, F12) at `/api/v1/` (outside i18n). ReadOnly
     viewsets for posts/pages/services/categories/tags (published-only, parler-aware
     serializers, `?lang=` override, list/detail split); the post viewset also takes
-    gated writes (`ModelViewSet`): `TokenAuthentication`+`SessionAuthentication`,
+    gated writes (`ModelViewSet`): `Token`+`Session`+`OAuth2Authentication`,
     `DjangoModelPermissionsOrAnonReadOnly` (anon read, model-perm-gated write),
     owner-scoped writes, publish gated server-side via `gate_publish_state`.
     Persistence runs through `content.services.api_create_post/api_update_post` →
     repository (no ORM in viewsets/serializers). `manage.py create_api_token <user>`
     mints tokens. `/health/` (liveness) + `/health/ready/` (DB probe) live here too.
-  - `apps.mcp` — MCP server (F12) at `POST /api/mcp/` with a `tools/list` +
-    `tools/call` JSON surface. `tools.py` is a registry of 13 management tools
+    **OAuth 2.1 (F12, django-oauth-toolkit):** an OAuth2 provider (PKCE required,
+    `read`/`write` scopes) is mounted at `/oauth/` (authorize/token/revoke, outside
+    i18n); `OAuth2Authentication` is added to the API + MCP auth floor ALONGSIDE
+    token+session (NOT replacing them). OAuth is **authentication only** — the existing
+    permissions/owner-scoping/per-tool re-verification still gate everything (no authz
+    bypass, adversarially verified). The API write surface adds an additive
+    `OAuth2ReadWriteScopeFloor` (only bites OAuth requests; token/session pass through).
+    `manage.py create_oauth_app <user>` mints a local client (secret shown once, hashed
+    at rest). `oauth2_provider` is in `INSTALLED_APPS`; `oauth2_provider.*` is untyped
+    for mypy but covered by the global `ignore_missing_imports`.
+  - `apps.mcp` — MCP server (F12). `tools.py` is a registry of 13 management tools
     (posts CRUD+publish, pages/categories/tags/media/users lists, comments.moderate,
-    settings.get); each declares the permission(s) it needs and the executor
-    (`services.call_tool`) **re-verifies them server-side** against the calling user
-    before delegating to the existing app services/repositories (same rules as the
-    UI). Token/session auth is the auth floor (`IsAuthenticated`). NOTE (deliberate
-    scope, REFACTOR_PLAN §7): token auth, not full OAuth 2.1; HTTP-JSON, not an
-    SSE/stdio MCP transport — both layer on later without touching the tools.
+    settings.get); each declares the permission(s) it needs **and a `write` flag** (the
+    5 state-mutating tools are `write=True`). The executor (`services.call_tool`)
+    **re-verifies the permissions server-side** against the calling user before
+    delegating to the existing app services/repositories (same rules as the UI).
+    **Two transports, one registry + one auth floor** (`Token`+`Session`+`OAuth2`,
+    `IsAuthenticated`): `POST /api/mcp/` (`tools/list`+`tools/call` JSON) and
+    `GET /api/mcp/sse` (`text/event-stream` — emits `tools/list` on connect and a
+    `tools/call` result event for `?name=&arguments=`; anonymous rejected). **OAuth
+    scope is per-TOOL, not HTTP-method** (MCP writes ride POST/GET): when the caller is
+    OAuth-authenticated, `call_tool`/`stream_events` deny a `write` tool unless the
+    token carries the `write` scope (an empty-scope token is also denied — gating keys
+    off `OAuth2Authentication`, not scope-truthiness); token/session auth is never
+    scope-gated. (Full F12 scope delivered — REFACTOR_PLAN §7; a stdio transport is the
+    only remaining deliberate omission.)
   - `apps.search` — public site search over published Posts and Pages (Phase 9.2).
     `services.search_content(query, language_code)` is the single entry point: it
     searches the translated title/body (+ Post excerpt) of the **active language's**

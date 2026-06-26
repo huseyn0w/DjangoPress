@@ -225,39 +225,51 @@ Each phase: TDD, subagent-driven where parallelizable, adversarial verification 
 
 ---
 
-## 7. Matrix-gap flags for the user
-- **F9 menus — FULL scope now delivered (the earlier reduction is CLOSED).** The matrix's menu
-  row asked for "items reference posts/pages/categories/custom URLs; **per-locale**" with a
-  nested builder. All of it now ships:
-  - **Nested (one-level) dropdown menus** — `MenuItem.parent` self-FK; the public header
-    renders an accessible CSS dropdown (`.nav-group`/`.nav-submenu` raw-CSS primitive: reveals
-    on hover **and** `:focus-within`, works with **no JS**, `aria-haspopup` + `role=menu`); the
-    mobile drawer indents children; the footer flattens them inline. The service resolves an
-    ordered tree (`get_menu_items` → `[{label,url,children}]`, children prefetched, no N+1). The
-    dashboard builder gained a parent select (scoped to the menu's top-level items, never self),
-    a one-level guard, a tree manage view, and sibling-scoped reorder.
-  - **Per-locale labels** — `MenuItem.label` is now a parler translated field (like
-    Post/Page/Category/Tag), edited one language at a time via the dashboard `?language=` tabs;
+## 7. Matrix-gap flags for the user — ALL deferred scope now CLOSED
+Every reduction previously flagged here has since been delivered (see the per-feature notes).
+No outstanding matrix gaps remain.
+
+- **F9 menus — FULL scope delivered (reduction CLOSED).** The matrix's menu row asked for
+  "items reference posts/pages/categories/custom URLs; **per-locale**" with a nested,
+  drag-sortable builder. All of it ships:
+  - **Arbitrary-depth nested dropdown menus** — `MenuItem.parent` self-FK to ANY depth; the
+    public header renders accessible recursive flyout submenus (`_menu_node.html` + the
+    `.nav-group`/`.nav-submenu` raw-CSS primitive: reveals on hover **and** `:focus-within`,
+    works with **no JS**, `aria-haspopup` + `role=menu`); mobile drawer indents the tree; footer
+    flattens it. `get_menu_items` resolves a recursive `[{label,url,children}]` tree assembled in
+    Python from ONE flat fetch + translations prefetch (no N+1 at any depth — assertNumQueries
+    test). The builder offers a parent select scoped to the menu and **cycle-protected** (never
+    self/descendant, enforced in the queryset AND `clean()`), a depth-indented tree view, and
+    sibling-scoped reorder.
+  - **Drag-and-drop reorder** — SortableJS progressive enhancement in the dashboard builder
+    (drops kept sibling-scoped) → JSON `MenuItemReorderView` (HTTP boundary → service →
+    `repository.reorder`, `manage_settings`-gated). The keyboard ↑/↓ arrows remain the **no-JS**
+    fallback.
+  - **Per-locale labels** — `MenuItem.label` is a parler translated field (like
+    Post/Page/Category/Tag), edited per language via the dashboard `?language=` tabs;
     `get_label()` resolves active-language label → any translated label → linked object's
     translated title → custom URL. Data-preserving migration (rename→create→copy→drop, verified
-    an existing label round-trips into the default-language translation).
-  - Still **deliberately** out of scope: **drag-drop** reordering (the keyboard up/down swap is
-    more robust + a11y-friendly and works without JS) and **>1 level** of nesting (standard nav
-    depth). Flag these only if the user explicitly wants them.
-- **F12 MCP — deliberate auth-floor reduction (not a matrix error).** The matrix asks for an
-  "OAuth 2.1 auth floor" (laravel's model). Shipped: a **DRF token (or session) auth floor**
-  over an HTTP `tools/list`/`tools/call` endpoint, with **every tool re-verifying its own
-  Django permission(s) server-side** (the substantive "no second source of truth" requirement
-  is fully met). Not yet shipped: an OAuth 2.1 authorization-server handshake and a streaming
-  (SSE/stdio) MCP transport — both are large, infra-coupled, and hard to test headlessly. The
-  tool registry + per-tool authorization are transport-agnostic, so an OAuth/SSE adapter can be
-  layered on later without touching the tools. Flagged for prioritisation. No other discrepancies.
+    an existing label round-trips into the default-language translation, reverse round-trips too).
+- **F12 MCP/API — OAuth 2.1 + SSE delivered (reduction CLOSED).** On top of the existing
+  token/session floor + per-tool server-side permission re-verification:
+  - **OAuth 2.1 auth floor** via `django-oauth-toolkit` (PKCE required; `read`/`write` scopes;
+    provider at `/oauth/`). `OAuth2Authentication` is added ALONGSIDE token+session on the API
+    and MCP — OAuth is **authentication only**: DjangoModelPermissions, owner-scoping and the
+    per-tool `has_perm` re-verification all still apply (adversarially verified — no authz
+    bypass). The API write surface adds an additive scope floor; **MCP scope is per-TOOL** (each
+    `Tool.write` flag; a `read`-scope or empty-scope OAuth token cannot run a write tool over
+    JSON or SSE), while token/session auth stays un-scoped.
+  - **SSE transport** — `GET /api/mcp/sse` (`text/event-stream`) emits `tools/list` on connect
+    and a `tools/call` result event, reusing the same registry + auth floor + per-tool authz;
+    anonymous rejected.
+  - Still deliberately out of scope: a **stdio** MCP transport (HTTP+SSE covers networked
+    clients; stdio is a local-process concern). Flag only if needed.
 
 ---
 
 ## 8. Per-layer test-status (Task 4) — every layer covered, none at zero
 
-Verified against the suite (**392 unit/integration passed, 10 e2e passed**; coverage ~97%).
+Verified against the suite (**452 unit/integration passed, 10 e2e passed**; coverage ~97%).
 Each architectural layer has dedicated and/or transitive tests — none is at zero. Where a
 layer is exercised transitively (e.g. repositories through their services), that is noted.
 
