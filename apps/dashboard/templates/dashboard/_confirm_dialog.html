@@ -36,7 +36,7 @@
     <h2 id="dp-confirm-title" class="font-display text-lg font-medium text-text">Please confirm</h2>
     <p id="dp-confirm-message" class="mt-2 text-sm text-text-muted" x-text="message"></p>
     <div class="mt-6 flex justify-end gap-2">
-      <button type="button" @click="cancel()" data-testid="confirm-cancel" class="dp-btn dp-btn-ghost">Cancel</button>
+      <button type="button" @click="cancel()" class="dp-btn dp-btn-ghost">Cancel</button>
       <button type="button" x-ref="confirmBtn" @click="confirm()" data-testid="confirm-accept" class="dp-btn dp-btn-primary">Confirm</button>
     </div>
   </div>

@@ -139,6 +139,20 @@ class PostRepository:
             .prefetch_related("translations")[:limit]
         )
 
+    @staticmethod
+    def published_in_category_for_feed(category: Category, limit: int) -> QuerySet:
+        """Most-recent published posts in ``category`` for that category's RSS feed.
+
+        Same published + non-trashed (default manager) scoping as ``for_feed``,
+        narrowed to the category and newest-first.
+        """
+        return (
+            Post.objects.published()
+            .filter(categories=category)
+            .select_related("author")
+            .prefetch_related("translations")[:limit]
+        )
+
 
 class PageRepository:
     @staticmethod

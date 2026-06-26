@@ -33,6 +33,10 @@ class CategoryPostListView(ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["taxonomy"] = self.category
+        # Distinct key (the shared template also renders tag archives via
+        # ``taxonomy``) so the per-category RSS autodiscovery link is emitted
+        # only on category pages.
+        ctx["category"] = self.category
         return ctx
 
 

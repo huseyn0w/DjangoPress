@@ -4,6 +4,16 @@
   {% if taxonomy %}{{ taxonomy }} · {% endif %}Blog · {{ site.site_name }}
 {% endblock %}
 
+{% block extra_head %}
+  {{ block.super }}
+  {% if category %}
+    {# Per-category RSS autodiscovery (this category's published posts). #}
+    <link rel="alternate" type="application/rss+xml"
+          title="{{ category }} · {{ site.site_name }}"
+          href="{% url 'content:category_rss' category.slug %}" />
+  {% endif %}
+{% endblock %}
+
 {% block main %}
 <header class="mb-14 reveal">
   {% if taxonomy %}

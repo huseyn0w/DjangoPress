@@ -61,7 +61,7 @@
       </thead>
       <tbody>
         {% for post in posts %}
-          <tr class="border-b border-border last:border-0" data-testid="post-row">
+          <tr class="border-b border-border last:border-0">
             {% if perms.content.delete_post %}
               <td class="px-5 py-3">
                 <input type="checkbox" value="{{ post.pk }}" x-model.number="selected"
