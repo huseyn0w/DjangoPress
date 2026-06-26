@@ -136,10 +136,20 @@
   min-width: 12rem;
   display: none;
   z-index: 50;
+  list-style: none;
 }
 .nav-group:hover > .nav-submenu,
 .nav-group:focus-within > .nav-submenu {
   display: block;
+}
+/* Nested levels fly out to the side (next to their parent item), not downward,
+   so a deep tree never overlaps itself. Same hover/focus-within reveal. */
+.nav-submenu .nav-group {
+  position: relative;
+}
+.nav-submenu .nav-group > .nav-submenu {
+  left: 100%;
+  top: -0.25rem;
 }
 
 /* Button primitive (raw CSS so it is never purged; @apply pulls in Tailwind

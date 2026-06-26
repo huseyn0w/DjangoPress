@@ -10,12 +10,9 @@
     <p class="font-mono uppercase tracking-wide">© {% now "Y" %} {{ site.site_name }}</p>
     <nav class="flex items-center gap-4" aria-label="Footer">
       {% if footer_items %}
+        {# Footers are flat: the whole tree renders inline as sibling links. #}
         {% for item in footer_items %}
-          <a class="transition-colors hover:text-text" href="{{ item.url }}">{{ item.label }}</a>
-          {# Footers are flat: nested children render inline as sibling links. #}
-          {% for child in item.children %}
-            <a class="transition-colors hover:text-text" href="{{ child.url }}">{{ child.label }}</a>
-          {% endfor %}
+          {% include "_menu_node_footer.html" with node=item %}
         {% endfor %}
       {% else %}
         <a class="transition-colors hover:text-text" href="{% url 'content:post_list' %}">Blog</a>

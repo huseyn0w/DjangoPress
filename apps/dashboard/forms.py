@@ -159,7 +159,7 @@ class MenuItemForm(TranslatableModelForm):
         model = MenuItem
         fields = ["parent", "label", "link_type", "url", "post", "page", "category"]
         help_texts = {
-            "parent": "Nest this item under a top-level item (one level deep).",
+            "parent": "Nest this item under another item in this menu (any depth).",
             "label": "Leave blank to use the linked item's title.",
             "url": "Used only for the “Custom URL” link type.",
         }
@@ -174,12 +174,14 @@ class MenuItemForm(TranslatableModelForm):
 
     def __init__(self, *args, menu: Menu | None = None, **kwargs):
         super().__init__(*args, **kwargs)
-        # Parent choices are this menu's top-level items only (one-level nesting),
-        # never the item itself. Scoped via the repository (the ORM home).
+        self._menu = menu
+        # Parent choices are any item in THIS menu except the item itself and any of
+        # its descendants (selecting one would create a cycle). Scoped via the
+        # repository (the ORM home).
         parent_field = cast(forms.ModelChoiceField, self.fields["parent"])
         instance = self.instance if self.instance.pk else None
         if menu is not None:
-            parent_field.queryset = MenuItemRepository.top_level_choices(menu, exclude=instance)
+            parent_field.queryset = MenuItemRepository.eligible_parents(menu, exclude=instance)
         parent_field.required = False
         parent_field.empty_label = "— Top level —"
 
@@ -188,10 +190,14 @@ class MenuItemForm(TranslatableModelForm):
         required = self._REQUIRED_FOR.get(cleaned.get("link_type"))
         if required and not cleaned.get(required):
             self.add_error(required, "Required for this link type.")
-        # One level only: an item that already has children can't itself be nested.
+        # Cycle prevention: a parent may be any item in the same menu except the
+        # item itself or any of its descendants. The queryset already excludes
+        # those, but re-check here so a forged POST can't slip a cycle through.
         parent = cleaned.get("parent")
-        if parent is not None and self.instance.pk and self.instance.children.exists():
-            self.add_error("parent", "This item has sub-items; move those out first.")
+        if parent is not None and self.instance.pk and self._menu is not None:
+            forbidden = MenuItemRepository.descendant_ids(self._menu, self.instance)
+            if parent.pk == self.instance.pk or parent.pk in forbidden:
+                self.add_error("parent", "An item can't be nested under itself or its children.")
         return cleaned
 
 

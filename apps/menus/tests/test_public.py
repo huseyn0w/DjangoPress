@@ -48,6 +48,23 @@ def test_nested_children_render_in_header_dropdown(client):
     assert "Alpha" in html
 
 
+def test_deeply_nested_grandchild_renders_in_header(client):
+    """A 2nd-level (grandchild) link is reachable in the recursive header dropdown."""
+    menu = Menu.objects.create(name="Primary", slug="primary")
+    products = MenuItem.objects.create(
+        menu=menu, label="Products", link_type=LinkType.CUSTOM, url="/products/"
+    )
+    alpha = MenuItem.objects.create(
+        menu=menu, label="Alpha", link_type=LinkType.CUSTOM, url="/products/a/", parent=products
+    )
+    MenuItem.objects.create(
+        menu=menu, label="Alpha v2", link_type=LinkType.CUSTOM, url="/products/a/v2/", parent=alpha
+    )
+    html = client.get("/").content.decode()
+    assert 'href="/products/a/v2/"' in html
+    assert "Alpha v2" in html
+
+
 def test_footer_flattens_nested_children(client):
     menu = Menu.objects.create(name="Footer", slug="footer")
     parent = MenuItem.objects.create(

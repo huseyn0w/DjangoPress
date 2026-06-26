@@ -54,6 +54,49 @@ def test_new_item_position_is_scoped_to_its_sibling_group():
     assert MenuItemRepository.next_position(menu, parent=None) == 2
 
 
+def test_get_menu_items_nests_to_three_levels():
+    """The tree resolves to arbitrary depth, ordered within each sibling group."""
+    menu = _menu()
+    l1 = MenuItem.objects.create(menu=menu, url="/l1/", label="L1", position=0)
+    l2 = MenuItem.objects.create(menu=menu, url="/l2/", label="L2", parent=l1, position=0)
+    MenuItem.objects.create(menu=menu, url="/l3b/", label="L3b", parent=l2, position=1)
+    MenuItem.objects.create(menu=menu, url="/l3a/", label="L3a", parent=l2, position=0)
+
+    items = services.get_menu_items("primary")
+
+    assert [i["label"] for i in items] == ["L1"]
+    level2 = items[0]["children"]
+    assert [c["label"] for c in level2] == ["L2"]
+    level3 = level2[0]["children"]
+    assert [c["label"] for c in level3] == ["L3a", "L3b"]
+    assert level3[0]["url"] == "/l3a/"
+    # Deepest leaves still carry an empty children list.
+    assert level3[0]["children"] == []
+
+
+def test_get_menu_items_deep_tree_has_no_n_plus_one(django_assert_num_queries):
+    """A 3-level tree is built from a fixed, small number of queries at any depth."""
+    menu = _menu()
+    root = MenuItem.objects.create(menu=menu, url="/r/", label="Root", position=0)
+    for i in range(3):
+        child = MenuItem.objects.create(
+            menu=menu, url=f"/c{i}/", label=f"C{i}", parent=root, position=i
+        )
+        for j in range(3):
+            MenuItem.objects.create(
+                menu=menu, url=f"/c{i}/g{j}/", label=f"G{i}{j}", parent=child, position=j
+            )
+
+    # One slug lookup + one flat items fetch + one translations prefetch — constant,
+    # regardless of how many nodes/levels the tree has (no per-node query).
+    with django_assert_num_queries(3):
+        items = services.get_menu_items("primary")
+        # Force full traversal so any lazy per-node query would fire here.
+        _ = [
+            (n["label"], [c["label"] for c in n["children"]]) for n in items for c in n["children"]
+        ]
+
+
 def test_move_only_reorders_within_the_same_parent():
     menu = _menu()
     parent = MenuItem.objects.create(menu=menu, url="/p/", label="Parent", position=0)

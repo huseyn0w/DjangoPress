@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect
 from django.template.defaultfilters import pluralize
 from django.urls import reverse_lazy
@@ -841,3 +843,24 @@ class MenuItemMoveView(AdminAccessMixin, View):
     def post(self, request, pk: int, item_pk: int, direction: str):
         services.move_menu_item(services.get_menu(pk), item_pk, direction)
         return redirect("dashboard:menu_manage", pk=pk)
+
+
+class MenuItemReorderView(AdminAccessMixin, View):
+    """JSON endpoint for the drag-drop builder — persists a new sibling order.
+
+    Progressive enhancement only: the keyboard ↑/↓ move endpoints remain the
+    no-JS path. Expects ``{"order": [id, ...]}``; the service renumbers those
+    items' positions (ids outside this menu are ignored by the repository).
+    """
+
+    permission_required = ("accounts.access_admin", "accounts.manage_settings")
+    http_method_names = ["post"]
+
+    def post(self, request, pk: int):
+        try:
+            payload = json.loads(request.body or b"{}")
+            order = [int(i) for i in payload.get("order", [])]
+        except (ValueError, TypeError):
+            return JsonResponse({"ok": False, "error": "invalid payload"}, status=400)
+        services.reorder_menu_items(services.get_menu(pk), order)
+        return JsonResponse({"ok": True})

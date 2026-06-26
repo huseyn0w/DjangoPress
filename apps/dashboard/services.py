@@ -249,8 +249,40 @@ def menu_items(menu):
 
 
 def menu_tree(menu):
-    """Top-level items (children prefetched) for the dashboard builder's tree view."""
-    return MenuRepository.top_level(menu)
+    """Flatten a menu into ordered depth-tagged rows for the builder's tree view.
+
+    Returns a list of ``{"item", "depth", "is_first", "is_last"}`` in render order
+    (pre-order DFS). ``depth`` drives indentation; ``is_first``/``is_last`` are
+    scoped to each item's sibling group so the ↑/↓ controls disable correctly at
+    the ends. Built in Python from one flat ordered fetch (no N+1).
+    """
+    items = MenuRepository.flat_for_tree(menu)
+    children_by_parent: dict[int | None, list] = {}
+    for item in items:
+        children_by_parent.setdefault(item.parent_id, []).append(item)
+
+    rows: list[dict] = []
+
+    def walk(parent_id, depth: int) -> None:
+        siblings = children_by_parent.get(parent_id, [])
+        for index, item in enumerate(siblings):
+            rows.append(
+                {
+                    "item": item,
+                    "depth": depth,
+                    "is_first": index == 0,
+                    "is_last": index == len(siblings) - 1,
+                }
+            )
+            walk(item.pk, depth + 1)
+
+    walk(None, 0)
+    return rows
+
+
+def reorder_menu_items(menu, ordered_ids: list[int]) -> None:
+    """Persist a new sibling order from the drag-drop builder (ids → positions)."""
+    MenuItemRepository.reorder(menu, ordered_ids)
 
 
 def delete_menu(pk: int) -> None:

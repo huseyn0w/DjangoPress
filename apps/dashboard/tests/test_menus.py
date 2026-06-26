@@ -1,5 +1,7 @@
 """Dashboard menu builder: CRUD + reorder (F9)."""
 
+import json
+
 import pytest
 from django.urls import reverse
 
@@ -118,7 +120,9 @@ def test_parent_choices_exclude_self_and_other_menus(client, make_user):
     assert f'value="{here.pk}"' not in html
 
 
-def test_item_with_children_cannot_be_nested(client, make_user):
+def test_item_with_children_can_be_nested_under_a_sibling(client, make_user):
+    """Arbitrary depth: an item that has children may itself be nested under a
+    sibling that is NOT one of its descendants (the subtree moves with it)."""
     client.force_login(make_user("boss", role="Administrator"))
     menu = Menu.objects.create(name="Primary", slug="primary")
     parent = MenuItem.objects.create(menu=menu, label="Parent", url="/p/")
@@ -128,9 +132,94 @@ def test_item_with_children_cannot_be_nested(client, make_user):
         reverse("dashboard:menu_item_edit", args=[menu.pk, parent.pk]),
         {"parent": root2.pk, "label": "Parent", "link_type": LinkType.CUSTOM, "url": "/p/"},
     )
+    assert response.status_code == 302  # accepted
+    parent.refresh_from_db()
+    assert parent.parent_id == root2.pk
+
+
+def test_item_cannot_be_nested_under_its_own_descendant(client, make_user):
+    """Cycle prevention: selecting a descendant as parent is rejected."""
+    client.force_login(make_user("boss", role="Administrator"))
+    menu = Menu.objects.create(name="Primary", slug="primary")
+    parent = MenuItem.objects.create(menu=menu, label="Parent", url="/p/")
+    child = MenuItem.objects.create(menu=menu, label="Child", url="/c/", parent=parent)
+    grandchild = MenuItem.objects.create(menu=menu, label="Grand", url="/g/", parent=child)
+    response = client.post(
+        reverse("dashboard:menu_item_edit", args=[menu.pk, parent.pk]),
+        {"parent": grandchild.pk, "label": "Parent", "link_type": LinkType.CUSTOM, "url": "/p/"},
+    )
     assert response.status_code == 200  # rejected, re-rendered
     parent.refresh_from_db()
     assert parent.parent_id is None
+
+
+def test_parent_choices_exclude_self_and_descendants(client, make_user):
+    """The parent <select> hides the item itself and every item beneath it."""
+    client.force_login(make_user("boss", role="Administrator"))
+    menu = Menu.objects.create(name="Primary", slug="primary")
+    parent = MenuItem.objects.create(menu=menu, label="Parent", url="/p/")
+    child = MenuItem.objects.create(menu=menu, label="ChildOfP", url="/c/", parent=parent)
+    MenuItem.objects.create(menu=menu, label="GrandOfP", url="/g/", parent=child)
+    other = MenuItem.objects.create(menu=menu, label="OtherRoot", url="/o/")
+    html = client.get(
+        reverse("dashboard:menu_item_edit", args=[menu.pk, parent.pk])
+    ).content.decode()
+    # Self + descendants are not offered as a parent (would create a cycle)…
+    assert f'value="{parent.pk}"' not in html
+    assert f'value="{child.pk}"' not in html
+    # …but a non-descendant sibling is a valid parent.
+    assert f'value="{other.pk}"' in html
+
+
+def test_reorder_endpoint_persists_sibling_order(client, make_user):
+    """Posting a new order of sibling ids persists their position (drag-drop save)."""
+    client.force_login(make_user("boss", role="Administrator"))
+    menu = Menu.objects.create(name="Primary", slug="primary")
+    a = MenuItem.objects.create(menu=menu, label="A", url="/a/", position=0)
+    b = MenuItem.objects.create(menu=menu, label="B", url="/b/", position=1)
+    c = MenuItem.objects.create(menu=menu, label="C", url="/c/", position=2)
+    response = client.post(
+        reverse("dashboard:menu_item_reorder", args=[menu.pk]),
+        data=json.dumps({"order": [c.pk, a.pk, b.pk]}),
+        content_type="application/json",
+    )
+    assert response.status_code == 200
+    a.refresh_from_db()
+    b.refresh_from_db()
+    c.refresh_from_db()
+    assert (c.position, a.position, b.position) == (0, 1, 2)
+
+
+def test_reorder_endpoint_is_scoped_to_the_menu(client, make_user):
+    """Ids from another menu are ignored — only this menu's items are renumbered."""
+    client.force_login(make_user("boss", role="Administrator"))
+    menu = Menu.objects.create(name="Primary", slug="primary")
+    other = Menu.objects.create(name="Footer", slug="footer")
+    a = MenuItem.objects.create(menu=menu, label="A", url="/a/", position=0)
+    b = MenuItem.objects.create(menu=menu, label="B", url="/b/", position=1)
+    foreign = MenuItem.objects.create(menu=other, label="X", url="/x/", position=5)
+    response = client.post(
+        reverse("dashboard:menu_item_reorder", args=[menu.pk]),
+        data=json.dumps({"order": [b.pk, foreign.pk, a.pk]}),
+        content_type="application/json",
+    )
+    assert response.status_code == 200
+    a.refresh_from_db()
+    b.refresh_from_db()
+    foreign.refresh_from_db()
+    assert (b.position, a.position) == (0, 1)
+    assert foreign.position == 5  # untouched
+
+
+def test_reorder_endpoint_rejects_unauthorized(client, make_user):
+    client.force_login(make_user("ed", role="Editor"))
+    menu = Menu.objects.create(name="Primary", slug="primary")
+    response = client.post(
+        reverse("dashboard:menu_item_reorder", args=[menu.pk]),
+        data=json.dumps({"order": []}),
+        content_type="application/json",
+    )
+    assert response.status_code == 403
 
 
 def test_manage_view_indents_child_items(client, make_user):

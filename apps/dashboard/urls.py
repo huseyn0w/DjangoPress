@@ -90,6 +90,11 @@ urlpatterns = [
         views.MenuItemMoveView.as_view(),
         name="menu_item_move",
     ),
+    path(
+        "menus/<int:pk>/items/reorder/",
+        views.MenuItemReorderView.as_view(),
+        name="menu_item_reorder",
+    ),
     # Comments (moderation)
     path("comments/", views.CommentListView.as_view(), name="comment_list"),
     path(
