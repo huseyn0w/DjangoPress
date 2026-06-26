@@ -760,7 +760,9 @@ class MenuManageView(AdminAccessMixin, SectionMixin, TemplateView):
         return ctx
 
 
-class MenuItemCreateView(AdminAccessMixin, SectionMixin, CreateView):
+class MenuItemCreateView(
+    AdminAccessMixin, SectionMixin, DashboardTranslatableFormMixin, CreateView
+):
     permission_required = ("accounts.access_admin", "accounts.manage_settings")
     model = MenuItem
     form_class = MenuItemForm
@@ -787,15 +789,22 @@ class MenuItemCreateView(AdminAccessMixin, SectionMixin, CreateView):
         return reverse_lazy("dashboard:menu_manage", args=[self.kwargs["pk"]])
 
 
-class MenuItemUpdateView(AdminAccessMixin, SectionMixin, UpdateView):
+class MenuItemUpdateView(
+    AdminAccessMixin, SectionMixin, DashboardTranslatableFormMixin, UpdateView
+):
     permission_required = ("accounts.access_admin", "accounts.manage_settings")
+    model = MenuItem
     form_class = MenuItemForm
     template_name = "dashboard/menu_item_form.html"
     section = "menus"
     heading = "Edit menu item"
 
     def get_object(self, queryset=None):
-        return services.get_menu_item(services.get_menu(self.kwargs["pk"]), self.kwargs["item_pk"])
+        item = services.get_menu_item(services.get_menu(self.kwargs["pk"]), self.kwargs["item_pk"])
+        # Mirror parler's own get_object: edit the translation for the ?language= tab
+        # (our get_language clamps unknown codes), not whatever language is active.
+        item.set_current_language(self.get_language(), initialize=True)
+        return item
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

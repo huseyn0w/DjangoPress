@@ -22,7 +22,8 @@ def test_add_items_get_appended_positions(client, make_user):
     url = reverse("dashboard:menu_item_create", args=[menu.pk])
     client.post(url, {"label": "First", "link_type": LinkType.CUSTOM, "url": "/a/"})
     client.post(url, {"label": "Second", "link_type": LinkType.CUSTOM, "url": "/b/"})
-    positions = list(menu.items.values_list("label", "position").order_by("position"))
+    # `label` is now a parler translated field, so read it via get_label().
+    positions = [(i.get_label(), i.position) for i in menu.items.order_by("position")]
     assert positions == [("First", 0), ("Second", 1)]
 
 
@@ -99,7 +100,8 @@ def test_item_can_be_created_under_a_parent(client, make_user):
         reverse("dashboard:menu_item_create", args=[menu.pk]),
         {"parent": parent.pk, "label": "Alpha", "link_type": LinkType.CUSTOM, "url": "/a/"},
     )
-    child = menu.items.get(label="Alpha")
+    child = menu.items.get(url="/a/")
+    assert child.get_label() == "Alpha"
     assert child.parent_id == parent.pk
     assert child.position == 0  # own sibling group, not appended after the parent
 
@@ -140,3 +142,23 @@ def test_manage_view_indents_child_items(client, make_user):
     assert "Products" in html
     assert "Alpha" in html
     assert "↳" in html  # nested-item marker
+
+
+def test_item_label_is_edited_per_language(client, make_user):
+    """The ?language= tab edits only that locale's label (parler), not the others."""
+    client.force_login(make_user("boss", role="Administrator"))
+    menu = Menu.objects.create(name="Primary", slug="primary")
+    item = MenuItem.objects.create(menu=menu, url="/about/")
+    item.set_current_language("en")
+    item.label = "About"
+    item.save()
+
+    edit_url = reverse("dashboard:menu_item_edit", args=[menu.pk, item.pk])
+    client.post(
+        f"{edit_url}?language=de",
+        {"label": "Über uns", "link_type": LinkType.CUSTOM, "url": "/about/"},
+    )
+
+    item.refresh_from_db()
+    assert item.safe_translation_getter("label", language_code="en") == "About"
+    assert item.safe_translation_getter("label", language_code="de") == "Über uns"

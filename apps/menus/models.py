@@ -1,7 +1,14 @@
+# django-parler ships no type stubs, so TranslatableModel / TranslatableManager /
+# TranslatedFields degrade to ``Any`` for mypy; the django-stubs plugin then can't type the
+# dynamically-injected ``label`` translation or the model fields declared after it. Same
+# file-level relaxation as apps/content/models.py (see its note).
+# mypy: disable-error-code="has-type, assignment, django-manager-missing, var-annotated, valid-type, misc"
 from __future__ import annotations
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from parler.managers import TranslatableManager
+from parler.models import TranslatableModel, TranslatedFields
 
 
 class Menu(models.Model):
@@ -37,11 +44,13 @@ class LinkType(models.TextChoices):
     CATEGORY = "category", _("Category")
 
 
-class MenuItem(models.Model):
+class MenuItem(TranslatableModel):
     """One entry in a menu, linking to a post/page/category or a custom URL.
 
-    The ``label`` is optional: for content links it falls back to the linked
-    object's (translated) title, so blog/page entries localise automatically.
+    The ``label`` is **per-locale** (parler) and optional: for content links it
+    falls back to the linked object's (translated) title, so blog/page entries
+    localise automatically; for custom-URL links each locale can carry its own
+    label (with any existing translation used as a fallback).
     """
 
     menu = models.ForeignKey(Menu, on_delete=models.CASCADE, related_name="items")
@@ -53,11 +62,13 @@ class MenuItem(models.Model):
         related_name="children",
         help_text=_("Nest this item under a top-level item (one level deep)."),
     )
-    label = models.CharField(
-        _("label"),
-        max_length=80,
-        blank=True,
-        help_text=_("Leave blank to use the linked item's title."),
+    translations = TranslatedFields(
+        label=models.CharField(
+            _("label"),
+            max_length=80,
+            blank=True,
+            help_text=_("Leave blank to use the linked item's title."),
+        )
     )
     link_type = models.CharField(
         _("links to"), max_length=10, choices=LinkType.choices, default=LinkType.CUSTOM
@@ -73,6 +84,8 @@ class MenuItem(models.Model):
         "content.Category", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     position = models.PositiveIntegerField(_("position"), default=0)
+
+    objects = TranslatableManager()
 
     class Meta:
         verbose_name = _("menu item")
@@ -97,7 +110,10 @@ class MenuItem(models.Model):
         return self.url or "/"
 
     def get_label(self) -> str:
-        if self.label:
-            return self.label
+        # Active-language label, else any translated label, else the linked
+        # object's (translated) title, else the custom URL.
+        label = self.safe_translation_getter("label", default="", any_language=True)
+        if label:
+            return label
         obj = self.linked_object()
         return str(obj) if obj is not None else (self.url or "")

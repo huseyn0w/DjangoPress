@@ -152,7 +152,9 @@ class MenuForm(forms.ModelForm):
         }
 
 
-class MenuItemForm(forms.ModelForm):
+class MenuItemForm(TranslatableModelForm):
+    # ``label`` is a parler translated field — edited one language at a time via
+    # the dashboard's ?language= tabs (DashboardTranslatableFormMixin).
     class Meta:
         model = MenuItem
         fields = ["parent", "label", "link_type", "url", "post", "page", "category"]

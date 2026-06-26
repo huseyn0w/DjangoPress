@@ -36,11 +36,16 @@ class MenuRepository:
         The ``children`` prefetch carries the same ``select_related`` so rendering
         a nested menu never issues a per-child query (no N+1).
         """
-        children = Prefetch("children", queryset=MenuItem.objects.select_related(*_WITH_TARGET))
+        children = Prefetch(
+            "children",
+            queryset=MenuItem.objects.select_related(*_WITH_TARGET).prefetch_related(
+                "translations"
+            ),
+        )
         return (
             menu.items.filter(parent__isnull=True)
             .select_related(*_WITH_TARGET)
-            .prefetch_related(children)
+            .prefetch_related("translations", children)
         )
 
     @staticmethod

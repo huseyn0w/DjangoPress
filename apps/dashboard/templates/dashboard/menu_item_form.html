@@ -5,6 +5,7 @@
   <p class="text-sm text-text-muted">Menu: <span class="font-medium text-text">{{ menu.name }}</span></p>
   <a href="{% url 'dashboard:menu_manage' menu.pk %}" class="dp-btn dp-btn-ghost text-sm">← Back to menu</a>
 </div>
+{% include "dashboard/_language_tabs.html" %}
 <form method="post" class="dp-form mx-auto max-w-lg space-y-5">
   {% csrf_token %}
   {% if form.non_field_errors %}
